@@ -24,20 +24,20 @@ html,body{height:100%;font-family:'Syne',sans-serif;background:var(--bg);color:v
 .shell{display:flex;flex-direction:column;min-height:100vh}
 
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:sticky;top:0;height:48px;z-index:100;flex-shrink:0}
-.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);letter-spacing:2px;text-transform:uppercase}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase;font-weight:800}
 .logo span{color:var(--text2);font-weight:400;font-size:11px;margin-left:8px;letter-spacing:1px;text-transform:uppercase}
 
 .steps-nav{display:flex;gap:0;padding:0 24px;background:var(--bg);border-bottom:1px solid var(--border);height:38px;flex-shrink:0;align-items:stretch}
-.step-tab{padding:0 20px;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px;display:flex;align-items:center;gap:7px}
+.step-tab{padding:0 20px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px;display:flex;align-items:center;gap:7px}
 .step-tab:hover{color:var(--text)}
 .step-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 .step-tab.done{color:var(--green);cursor:pointer}
-.snum{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:var(--bg3);color:var(--text2);flex-shrink:0}
+.snum{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;background:var(--bg3);color:var(--text2);flex-shrink:0}
 .step-tab.active .snum{background:var(--accent);color:#fff}
 .step-tab.done .snum{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
-.nav-info{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2);font-weight:700;padding-right:4px}
+.nav-info{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2);font-weight:600;padding-right:4px}
 
-.btn{padding:6px 14px;border-radius:50px;border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text);letter-spacing:.3px;white-space:nowrap}
+.btn{padding:6px 14px;border-radius:50px;border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text);letter-spacing:.3px;white-space:nowrap}
 .btn:hover{border-color:var(--accent)}
 .btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{background:#333}
 .btn-lg{padding:10px 28px;font-size:13px}
@@ -49,9 +49,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:.3}
 
 .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;transition:border-color .2s}
 .card:hover{border-color:var(--accent)}
-.ctitle{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:14px}
+.ctitle{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:14px}
 
-.badge{font-size:11px;padding:3px 10px;border-radius:50px;font-weight:700;letter-spacing:.3px}
+.badge{font-size:11px;padding:3px 10px;border-radius:50px;font-weight:600;letter-spacing:.3px}
 .bg{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
 .br{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b)}
 .ba{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b)}
@@ -59,8 +59,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:.3}
 
 .mkpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 14px;transition:border-color .2s;overflow:hidden}
 .mkpi:hover{border-color:var(--accent)}
-.mkpi-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:800}
-.mkpi-v{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;margin:4px 0;line-height:1}
+.mkpi-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+.mkpi-v{font-family:'Space Mono',monospace;font-size:20px;font-weight:600;margin:4px 0;line-height:1}
 .mkpi-t{font-size:10px;color:var(--text3);font-weight:600}
 .mkpi-bar{height:4px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden}
 .mkpi-bar-f{height:100%;border-radius:2px;transition:width .8s}
@@ -69,14 +69,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.3}
 .ucard:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.07);border-color:var(--accent)}
 
 .tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:800;color:var(--text2);padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;cursor:default}
+.tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;color:var(--text2);padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;cursor:default}
 .tbl th.sortable{cursor:pointer}.tbl th.sortable:hover{color:var(--text)}
 .tbl th.sorted{color:var(--accent)}
 .tbl td{padding:10px 12px;border-bottom:1px solid var(--bg3)}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tbody tr:hover td{background:var(--bg2)}
 
-.itbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:800;color:var(--text2);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
+.itbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;color:var(--text2);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
 .itbl td{padding:6px 10px;border-bottom:1px solid var(--bg3)}
 .itbl td input,.itbl td select{border-radius:8px;padding:6px 9px;font-size:12px}
 .itbl tbody tr:nth-child(even) td{background:rgba(0,0,0,.013)}
@@ -227,7 +227,7 @@ function App(){
       {step===1&&(
         <div className="view step-fade">
           <div style={{maxWidth:860,margin:"0 auto"}}>
-            <h1 style={{fontSize:28,fontWeight:800,letterSpacing:"-.5px",marginBottom:6}}>Novo Estudo</h1>
+            <h1 style={{fontSize:26,fontWeight:700,letterSpacing:"-.5px",marginBottom:6}}>Novo Estudo</h1>
             <p style={{fontSize:13,color:"var(--text2)",marginBottom:28}}>Configure o empreendimento. O bairro determina o DemandIndex automaticamente via AirDNA.</p>
 
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
@@ -256,16 +256,20 @@ function App(){
                 </div>
 
                 <div style={{background:"var(--green-bg)",border:"1px solid var(--green-b)",borderRadius:16,padding:"16px 20px"}}>
-                  <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"var(--green)",marginBottom:14}}>Parâmetros de Mercado · AirDNA LTM</div>
+                  <div style={{fontSize:10,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"var(--green)",marginBottom:14}}>Parâmetros de Mercado · AirDNA LTM</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-                    {[["Bairro",proj.bairro,false,null],["DemandIndex",bd.di.toFixed(3),true,"var(--accent)"],["Ocupação LTM",pct(bd.occ*100),true,"var(--green)"],["ADR ref.","R$795",true,"var(--accent)"]].map(([l,v,mono,c])=>(
-                      <div key={l} style={{background:"rgba(255,255,255,.7)",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
-                        <div style={{fontFamily:mono?"'Space Mono',monospace":"'Syne',sans-serif",fontSize:mono?14:12,fontWeight:700,color:c||"var(--text)",lineHeight:1}}>{v}</div>
-                        <div style={{fontSize:9,color:"var(--text2)",marginTop:5,fontWeight:800,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
-                      </div>
-                    ))}
+                    {(()=>{
+                      const decayRef=Math.max(0.55,Math.exp(-0.0035*proj.distPraia));
+                      const adrEst=Math.round(ADRREF*Math.pow(bd.di,A)*Math.pow(decayRef,B));
+                      return [["Bairro",proj.bairro,false,null],["DemandIndex",bd.di.toFixed(3),true,"var(--accent)"],["Ocupação LTM",pct(bd.occ*100),true,"var(--green)"],["ADR estimado",brl(adrEst),true,"var(--accent)"]].map(([l,v,mono,c])=>(
+                        <div key={l} style={{background:"rgba(255,255,255,.7)",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
+                          <div style={{fontFamily:mono?"'Space Mono',monospace":"'Syne',sans-serif",fontSize:mono?13:12,fontWeight:600,color:c||"var(--text)",lineHeight:1}}>{v}</div>
+                          <div style={{fontSize:9,color:"var(--text2)",marginTop:5,fontWeight:600,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
+                        </div>
+                      ));
+                    })()}
                   </div>
-                  <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--green-b)",fontSize:10,color:"#6b9f7a",fontWeight:600,lineHeight:1.7}}>
+                  <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--green-b)",fontSize:10,color:"#6b9f7a",fontWeight:500,lineHeight:1.7}}>
                     ADR = R$795 × DI<sup>0.60</sup> × SM<sup>0.40</sup> · Fonte: {today}
                   </div>
                 </div>
@@ -284,7 +288,7 @@ function App(){
         <div className="view step-fade">
           <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
             <div>
-              <h1 style={{fontSize:24,fontWeight:800,letterSpacing:"-.3px"}}>
+              <h1 style={{fontSize:22,fontWeight:700,letterSpacing:"-.3px"}}>
                 {proj.nome} &nbsp;<span className="badge bb">{units.length} UHs</span>
               </h1>
               <p style={{fontSize:12,color:"var(--text2)",marginTop:4}}>{proj.endereco} · {proj.bairro} · DI {bd.di.toFixed(3)} · VGV <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</span></p>
@@ -332,7 +336,7 @@ function App(){
         <div className="view step-fade">
           <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:12}}>
             <div>
-              <h1 style={{fontSize:24,fontWeight:800,letterSpacing:"-.3px",lineHeight:1.1}}>{proj.nome}</h1>
+              <h1 style={{fontSize:22,fontWeight:700,letterSpacing:"-.3px",lineHeight:1.1}}>{proj.nome}</h1>
               <p style={{fontSize:12,color:"var(--text2)",marginTop:4}}>{proj.endereco} &nbsp;·&nbsp; {proj.bairro} &nbsp;·&nbsp; DI {bd.di.toFixed(3)} &nbsp;·&nbsp; {units.length} UHs &nbsp;·&nbsp; {today}</p>
             </div>
             <div style={{display:"flex",gap:6}} className="no-print">
@@ -368,7 +372,7 @@ function App(){
 
           {/* Legenda */}
           <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:10,fontWeight:800,color:"var(--text3)",letterSpacing:1,textTransform:"uppercase",marginRight:4}}>Yield:</span>
+            <span style={{fontSize:10,fontWeight:600,color:"var(--text3)",letterSpacing:1,textTransform:"uppercase",marginRight:4}}>Yield:</span>
             {[14,12,10,8,0].map(y=>{const c=yc(y+.1);return(
               <span key={y} className={`badge ${c.cls}`} style={{fontSize:10}}>{c.label}</span>
             );})}
@@ -377,15 +381,15 @@ function App(){
           {/* HEATMAP */}
           <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:18,marginBottom:14}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-              <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Mapa de Rentabilidade por Pavimento</div>
-              <div style={{fontSize:11,color:"var(--text3)",fontWeight:700}}>{units.length} unidades · modelo natural Cobb-Douglas</div>
+              <div style={{fontSize:10,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Mapa de Rentabilidade por Pavimento</div>
+              <div style={{fontSize:11,color:"var(--text3)",fontWeight:600}}>{units.length} unidades · modelo natural Cobb-Douglas</div>
             </div>
 
             {byFloor.map(([floor,fus])=>(
               <div key={floor} style={{marginBottom:14}}>
                 <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                  <span style={{background:"var(--bg3)",borderRadius:8,padding:"2px 10px",fontSize:10,fontWeight:800,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{floor}º andar</span>
-                  <span style={{fontSize:10,color:"var(--text3)",fontWeight:700,whiteSpace:"nowrap"}}>{fus.length} UH{fus.length>1?"s":""}</span>
+                  <span style={{background:"var(--bg3)",borderRadius:8,padding:"2px 10px",fontSize:10,fontWeight:600,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{floor}º andar</span>
+                  <span style={{fontSize:10,color:"var(--text3)",fontWeight:600,whiteSpace:"nowrap"}}>{fus.length} UH{fus.length>1?"s":""}</span>
                   <div style={{flex:1,height:1,background:"var(--border)"}}/>
                 </div>
                 <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
@@ -394,13 +398,13 @@ function App(){
                     return(
                       <div key={r.id} className="ucard" style={{background:c.bg,border:`1px solid ${c.bo}`,minWidth:152,maxWidth:184}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                          <span style={{fontSize:13,fontWeight:800}}>{r.nome}</span>
+                          <span style={{fontSize:13,fontWeight:600}}>{r.nome}</span>
                           <span className={`badge ${c.cls}`} style={{fontSize:9}}>{c.label}</span>
                         </div>
-                        <div style={{fontSize:11,color:"var(--text2)",marginBottom:8,fontWeight:700}}>
+                        <div style={{fontSize:11,color:"var(--text2)",marginBottom:8,fontWeight:600}}>
                           {r.area}m² &nbsp;·&nbsp; {VISTAS.find(v=>v.key===r.vista)?.short}
                         </div>
-                        <div style={{fontFamily:"'Space Mono',monospace",fontSize:28,fontWeight:700,color:c.tc,lineHeight:1,marginBottom:8}}>
+                        <div style={{fontFamily:"'Space Mono',monospace",fontSize:26,fontWeight:700,color:c.tc,lineHeight:1,marginBottom:8}}>
                           {pct(r.y)}
                         </div>
                         <div style={{fontSize:11,lineHeight:1.9,fontWeight:600}}>
@@ -419,8 +423,8 @@ function App(){
           {/* RANKING */}
           <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden"}}>
             <div style={{padding:"12px 18px",borderBottom:"1px solid var(--border)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Ranking de Rentabilidade</span>
-              <span style={{fontSize:10,color:"var(--text3)",fontWeight:700}}>Clique no cabeçalho para ordenar</span>
+              <span style={{fontSize:10,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Ranking de Rentabilidade</span>
+              <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>Clique no cabeçalho para ordenar</span>
             </div>
             <div style={{overflowX:"auto"}}>
               <table className="tbl">
@@ -442,11 +446,11 @@ function App(){
                     return(
                       <tr key={r.id}>
                         <td style={{color:"var(--text3)",fontSize:11,fontFamily:"'Space Mono',monospace"}}>#{i+1}</td>
-                        <td style={{fontWeight:800}}>{r.nome}</td>
+                        <td style={{fontWeight:600}}>{r.nome}</td>
                         <td style={{fontFamily:"'Space Mono',monospace",color:"var(--text2)"}}>{r.area}m²</td>
                         <td style={{color:"var(--text2)",textAlign:"center"}}>{r.andar}º</td>
-                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:700}}>{brl(r.adr)}</td>
-                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:700}}>{brl(Math.round(r.res))}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(r.adr)}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(r.res))}</td>
                         <td style={{fontFamily:"'Space Mono',monospace",color:"var(--text2)"}}>R${Math.round(r.rpm)}</td>
                         <td><span className={`badge ${c.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:12}}>{pct(r.y)}</span></td>
                         <td style={{color:"var(--text2)",fontSize:12}}>{VISTAS.find(v=>v.key===r.vista)?.label}</td>
@@ -458,7 +462,7 @@ function App(){
             </div>
             <div style={{padding:"10px 18px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
               <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>Modelo Cobb-Douglas α=0.60 / β=0.40 · AirDNA LTM Mar/2026 · Sazonalidade BD Repasse Lobie 2025</span>
-              <span style={{fontSize:10,color:"var(--text3)",fontWeight:700}}>Confidencial · {today}</span>
+              <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>Confidencial · {today}</span>
             </div>
           </div>
 
@@ -471,7 +475,7 @@ function App(){
 function FG({l,children}){
   return(
     <div>
-      <div style={{fontSize:10,color:"var(--text2)",marginBottom:5,fontWeight:800,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
+      <div style={{fontSize:10,color:"var(--text2)",marginBottom:5,fontWeight:600,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
       {children}
     </div>
   );
