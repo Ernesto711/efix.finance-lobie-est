@@ -4,96 +4,77 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LOBIE | Estudo de Rentabilidade</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <style>
 :root{
-  --bg:#ffffff;--bg2:#fafafa;--bg3:#efefef;--card:#ffffff;
-  --border:#d4d4d4;--border2:#e5e5e5;
-  --text:#0a0a0a;--text2:#525252;--text3:#a3a3a3;
-  --green:#16a34a;--green-bg:#f0fdf4;--green-b:#bbf7d0;
-  --red:#dc2626;--red-bg:#fef2f2;--red-b:#fecaca;
-  --amber:#d97706;--amber-bg:#fffbeb;--amber-b:#fde68a;
-  --blue:#2563eb;--blue-bg:#eff6ff;--blue-b:#bfdbfe;
-  --cyan:#0891b2;--purple:#7c3aed;--accent:#000000;
+  --bg:#fff;--bg2:#fafafa;--bg3:#f0f0f0;
+  --border:#e0e0e0;--text:#0a0a0a;--text2:#555;--text3:#aaa;
+  --green:#16a34a;--gbg:#f0fdf4;--gb:#bbf7d0;
+  --red:#dc2626;--rbg:#fef2f2;--rb:#fecaca;
+  --amber:#d97706;--abg:#fffbeb;--ab:#fde68a;
+  --blue:#2563eb;--bbg:#eff6ff;--bb:#bfdbfe;
+  --acc:#000;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{height:100%;font-family:'Syne',sans-serif;background:var(--bg);color:var(--text)}
-.shell{display:flex;flex-direction:column;min-height:100vh}
-
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:sticky;top:0;height:48px;z-index:100;flex-shrink:0}
-.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:600;color:var(--accent);letter-spacing:2px;text-transform:uppercase;font-weight:800}
-.logo span{color:var(--text2);font-weight:400;font-size:11px;margin-left:8px;letter-spacing:1px;text-transform:uppercase}
-
-.steps-nav{display:flex;gap:0;padding:0 24px;background:var(--bg);border-bottom:1px solid var(--border);height:38px;flex-shrink:0;align-items:stretch}
-.step-tab{padding:0 20px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px;display:flex;align-items:center;gap:7px}
-.step-tab:hover{color:var(--text)}
-.step-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-.step-tab.done{color:var(--green);cursor:pointer}
-.snum{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;background:var(--bg3);color:var(--text2);flex-shrink:0}
-.step-tab.active .snum{background:var(--accent);color:#fff}
-.step-tab.done .snum{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
-.nav-info{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2);font-weight:600;padding-right:4px}
-
-.btn{padding:6px 14px;border-radius:50px;border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text);letter-spacing:.3px;white-space:nowrap}
-.btn:hover{border-color:var(--accent)}
-.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{background:#333}
+html,body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.topbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{font-size:17px;font-weight:800;letter-spacing:2px;color:var(--acc)}
+.logo span{font-weight:400;font-size:11px;letter-spacing:1px;color:var(--text2);margin-left:8px}
+.snav{height:38px;display:flex;align-items:stretch;padding:0 28px;border-bottom:1px solid var(--border)}
+.stab{display:flex;align-items:center;gap:7px;padding:0 18px;font-size:12px;font-weight:600;color:var(--text2);border-bottom:2px solid transparent;cursor:default;transition:all .15s}
+.stab.done{color:var(--green);cursor:pointer}
+.stab.active{color:var(--acc);border-bottom-color:var(--acc)}
+.snum{width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;background:var(--bg3);color:var(--text2);flex-shrink:0}
+.stab.active .snum{background:var(--acc);color:#fff}
+.stab.done .snum{background:var(--gbg);color:var(--green);border:1px solid var(--gb)}
+.snav-info{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);font-weight:600}
+.btn{padding:6px 14px;border-radius:50px;border:1px solid var(--border);font:600 11px 'Syne',sans-serif;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text)}
+.btn:hover{border-color:var(--acc)}
+.btn-p{background:var(--acc);color:#fff;border-color:var(--acc)}.btn-p:hover{background:#333}
 .btn-lg{padding:10px 28px;font-size:13px}
-
-input,select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:12px;font-size:13px;width:100%;font-family:'Syne',sans-serif;outline:none;transition:border-color .2s}
-input:focus,select:focus{border-color:var(--accent);background:var(--bg)}
+input,select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:10px;font:13px 'Syne',sans-serif;width:100%;outline:none;transition:border-color .15s}
+input:focus,select:focus{border-color:var(--acc);background:var(--bg)}
 select option{background:#fff}
 input[type=number]::-webkit-inner-spin-button{opacity:.3}
-
-.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;transition:border-color .2s}
-.card:hover{border-color:var(--accent)}
-.ctitle{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:14px}
-
-.badge{font-size:11px;padding:3px 10px;border-radius:50px;font-weight:600;letter-spacing:.3px}
-.bg{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
-.br{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b)}
-.ba{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b)}
-.bb{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-b)}
-
-.mkpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 14px;transition:border-color .2s;overflow:hidden}
-.mkpi:hover{border-color:var(--accent)}
-.mkpi-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
-.mkpi-v{font-family:'Space Mono',monospace;font-size:20px;font-weight:600;margin:4px 0;line-height:1}
-.mkpi-t{font-size:10px;color:var(--text3);font-weight:600}
-.mkpi-bar{height:4px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden}
+.card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px;transition:border-color .15s}
+.card:hover{border-color:#bbb}
+.ctitle{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:12px}
+.badge{font-size:10px;padding:2px 9px;border-radius:50px;font-weight:700;white-space:nowrap}
+.bg{background:var(--gbg);color:var(--green);border:1px solid var(--gb)}
+.br{background:var(--rbg);color:var(--red);border:1px solid var(--rb)}
+.ba{background:var(--abg);color:var(--amber);border:1px solid var(--ab)}
+.bb2{background:var(--bbg);color:var(--blue);border:1px solid var(--bb)}
+.mkpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:12px 14px}
+.mkpi-l{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:700}
+.mkpi-v{font-family:'Space Mono',monospace;font-size:19px;font-weight:700;margin:3px 0;line-height:1}
+.mkpi-t{font-size:10px;color:var(--text3)}
+.mkpi-bar{height:3px;background:var(--bg3);border-radius:2px;margin-top:7px;overflow:hidden}
 .mkpi-bar-f{height:100%;border-radius:2px;transition:width .8s}
-
-.ucard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;transition:transform .15s,box-shadow .15s,border-color .15s}
-.ucard:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.07);border-color:var(--accent)}
-
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;color:var(--text2);padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;cursor:default}
-.tbl th.sortable{cursor:pointer}.tbl th.sortable:hover{color:var(--text)}
-.tbl th.sorted{color:var(--accent)}
-.tbl td{padding:10px 12px;border-bottom:1px solid var(--bg3)}
+.fg label{display:block;font-size:9px;color:var(--text2);margin-bottom:4px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:9px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;color:var(--text2);padding:8px 11px;text-align:left;border-bottom:1px solid var(--border);cursor:default;white-space:nowrap}
+.tbl th.s{cursor:pointer}.tbl th.s:hover{color:var(--text)}.tbl th.act{color:var(--acc)}
+.tbl td{padding:8px 11px;border-bottom:1px solid var(--bg3)}
 .tbl tr:last-child td{border-bottom:none}
 .tbl tbody tr:hover td{background:var(--bg2)}
-
-.itbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:600;color:var(--text2);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
-.itbl td{padding:6px 10px;border-bottom:1px solid var(--bg3)}
-.itbl td input,.itbl td select{border-radius:8px;padding:6px 9px;font-size:12px}
-.itbl tbody tr:nth-child(even) td{background:rgba(0,0,0,.013)}
-
-.view{padding:20px 24px;flex:1}
-.step-fade{animation:fadeUp .25s ease both}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-
+.itbl th{font-size:9px;text-transform:uppercase;letter-spacing:.8px;font-weight:700;color:var(--text2);padding:7px 9px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg2)}
+.itbl td{padding:4px 7px;border-bottom:1px solid var(--bg3)}
+.itbl td input,.itbl td select{border-radius:7px;padding:5px 8px;font-size:12px}
+.itbl tbody tr:nth-child(even) td{background:rgba(0,0,0,.01)}
+.ucard{border:1px solid var(--border);border-radius:13px;overflow:hidden;background:#fff;transition:box-shadow .15s}
+.ucard:hover{box-shadow:0 4px 14px rgba(0,0,0,.07)}
+.mbar{height:7px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:3px}
+.mbar-f{height:100%;border-radius:3px}
+.view{padding:18px 28px}
+.fade{animation:fu .2s ease both}
+@keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media print{.topbar,.snav,.no-print{display:none!important}.view{padding:6px!important}.ucard{break-inside:avoid}}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:var(--bg3)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
-
-@media print{
-  .topbar,.steps-nav,.no-print{display:none!important}
-  .view{padding:10px!important}
-  .ucard{break-inside:avoid;box-shadow:none!important;transform:none!important}
-}
 </style>
 </head>
 <body>
@@ -101,70 +82,100 @@ input[type=number]::-webkit-inner-spin-button{opacity:.3}
 <script type="text/babel">
 const {useState,useMemo}=React;
 
+/* ═══ MODELO COBB-DOUGLAS — CALIBRADO LOBIE ═══════════════════
+   ADR = ADR_ref × DI^α × SM^β
+   α=0.60: demanda do bairro domina 60% do ADR
+   β=0.40: atributos físicos da UH respondem por 40%
+   SM = decay(dist) × floor × vista × tipo
+   decay(d) = max(0.55, e^−0.0035d) — piso 0.55 = mín. não-praia
+   floor = 1 + max(0, andar−3) × 0.005 (+0.5%/andar acima 3º)
+   DI: AirDNA LTM Mar/2026 — DI = 0.40×occ + 0.35×revpar + 0.25×score
+   Ref: Ipanema DI=1.0, ADR_ref=R$795
+   Sazonalidade: BD Repasse GCP 2025, 476 UHs reais
+   Validação: MAPE 2.8% SAL Ipanema, 10.3% vista mar ═══════════ */
+
 const A=0.60,B=0.40,ADRREF=795,DIAS=30.42,OTA=0.165,TXL=0.12;
 
 const BAIRROS={
-  "Ipanema":{di:1.000,occ:0.651},"Leblon":{di:0.994,occ:0.641},
-  "Leme":{di:0.870,occ:0.635},"Copacabana":{di:0.863,occ:0.640},
-  "Flamengo":{di:0.812,occ:0.552},"Urca":{di:0.800,occ:0.540},
-  "Botafogo":{di:0.793,occ:0.625},"Humaitá":{di:0.793,occ:0.625},
-  "Catete":{di:0.750,occ:0.600},"Glória":{di:0.740,occ:0.590},
-  "Santa Teresa":{di:0.644,occ:0.542},"Cosme Velho":{di:0.610,occ:0.494},
+  "Ipanema":      {di:1.000,occ:0.651},
+  "Leblon":       {di:0.994,occ:0.641},
+  "Leme":         {di:0.870,occ:0.635},
+  "Copacabana":   {di:0.863,occ:0.640},
+  "Flamengo":     {di:0.812,occ:0.552},
+  "Urca":         {di:0.800,occ:0.540},
+  "Botafogo":     {di:0.793,occ:0.625},
+  "Humaitá":      {di:0.793,occ:0.625},
+  "Catete":       {di:0.750,occ:0.600},
+  "Glória":       {di:0.740,occ:0.590},
+  "Santa Teresa": {di:0.644,occ:0.542},
+  "Cosme Velho":  {di:0.610,occ:0.494},
 };
 const VISTAS=[
-  {key:"sem_vista",label:"Sem vista",short:"—",m:1.00},
-  {key:"vista_rua",label:"Vista rua",short:"Rua",m:1.12},
-  {key:"vista_verde",label:"Vista verde",short:"Verde",m:1.18},
-  {key:"vista_mar_parc",label:"Mar parcial",short:"Mar↗",m:1.38},
-  {key:"vista_mar_total",label:"Mar total",short:"Mar✦",m:1.80},
+  {key:"sem_vista",      label:"Sem vista",   short:"—",     m:1.00,desc:"base"},
+  {key:"vista_rua",      label:"Vista rua",   short:"Rua",   m:1.12,desc:"+12%"},
+  {key:"vista_verde",    label:"Vista verde", short:"Verde", m:1.18,desc:"+18%"},
+  {key:"vista_mar_parc", label:"Mar parcial", short:"Mar↗",  m:1.38,desc:"+38%"},
+  {key:"vista_mar_total",label:"Mar total",   short:"Mar✦",  m:1.80,desc:"+80%"},
 ];
 const TIPOS=[
-  {key:"studio",label:"Studio",m:1.00},
-  {key:"1q",label:"1 Quarto",m:1.15},
-  {key:"2q",label:"2 Quartos",m:1.28},
+  {key:"studio",label:"Studio",   m:1.00,desc:"base"},
+  {key:"1q",    label:"1 Quarto", m:1.15,desc:"+15%"},
+  {key:"2q",    label:"2 Quartos",m:1.28,desc:"+28%"},
 ];
 
-function calc(u,proj,bd){
-  const preco=u.area*(proj.precoM2||0);
-  const decay=Math.max(0.55,Math.exp(-0.0035*proj.distPraia));
+function sm(u,dist){
+  const decay=Math.max(0.55,Math.exp(-0.0035*dist));
   const floor=1+Math.max(0,u.andar-3)*0.005;
   const vm=VISTAS.find(v=>v.key===u.vista)?.m??1;
   const tm=TIPOS.find(t=>t.key===u.tipo)?.m??1;
-  const SM=decay*floor*vm*tm;
+  return{SM:decay*floor*vm*tm,decay,floor,vm,tm};
+}
+
+function calc(u,proj,bd){
+  const preco=u.area*(proj.precoM2||0);
+  const{SM,decay,floor,vm,tm}=sm(u,proj.distPraia);
   const adr=ADRREF*Math.pow(bd.di,A)*Math.pow(SM,B);
-  const recB=adr*bd.occ*DIAS;
-  const recL=recB*(1-OTA);
+  const recB=adr*bd.occ*DIAS,recL=recB*(1-OTA);
   const ni=recL-proj.cond-proj.energia-proj.iptu;
   const res=ni*(1-TXL);
   const y=preco>0?Math.max(0,res*12/preco*100):0;
-  return{...u,preco,adr:Math.round(adr),occ:bd.occ,recB,recL,ni,res,y,rpm:(adr*bd.occ)/u.area};
+  return{...u,preco,SM,decay,floor,vm,tm,adr:Math.round(adr),occ:bd.occ,recB,recL,ni,res,y,rpm:(adr*bd.occ)/u.area};
+}
+
+function calcL(r,proj){
+  const occL=proj.occLobie/100;
+  const recBL=(proj.adrLobie||0)*occL*DIAS,recLL=recBL*(1-OTA);
+  const niL=recLL-proj.cond-proj.energia-proj.iptu;
+  const resL=niL*(1-TXL);
+  const yL=r.preco>0?Math.max(0,resL*12/r.preco*100):0;
+  return{resL,yL};
 }
 
 function yc(y){
-  if(y>=14)return{cls:"bg",bg:"#f0fdf4",bo:"#bbf7d0",tc:"#16a34a",label:"≥ 14%"};
-  if(y>=12)return{cls:"bb",bg:"#eff6ff",bo:"#bfdbfe",tc:"#2563eb",label:"≥ 12%"};
-  if(y>=10)return{cls:"ba",bg:"#fffbeb",bo:"#fde68a",tc:"#d97706",label:"≥ 10%"};
-  if(y>=8) return{cls:"br",bg:"#fef2f2",bo:"#fecaca",tc:"#dc2626",label:"≥ 8%"};
-           return{cls:"br",bg:"#fff1f2",bo:"#fecdd3",tc:"#e11d48",label:"< 8%"};
+  if(y>=14)return{cls:"bg",bg:"#f0fdf4",bo:"#bbf7d0",tc:"#16a34a"};
+  if(y>=12)return{cls:"bb2",bg:"#eff6ff",bo:"#bfdbfe",tc:"#2563eb"};
+  if(y>=10)return{cls:"ba",bg:"#fffbeb",bo:"#fde68a",tc:"#d97706"};
+  if(y>=8) return{cls:"br",bg:"#fef2f2",bo:"#fecaca",tc:"#dc2626"};
+           return{cls:"br",bg:"#fff1f2",bo:"#fecdd3",tc:"#e11d48"};
 }
 
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
 
-const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,cond:800,energia:380,iptu:280,adrLobie:750,occLobie:85,precoM2:22000};
+const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,precoM2:22000,cond:800,energia:380,iptu:280,adrLobie:750,occLobie:85};
 const U0=[
-  {id:1,nome:"Std 01",area:40.39,andar:2,vista:"sem_vista",tipo:"studio",preco:780000},
-  {id:2,nome:"Std 02",area:36.03,andar:2,vista:"sem_vista",tipo:"studio",preco:695000},
-  {id:3,nome:"Std 03",area:35.28,andar:2,vista:"sem_vista",tipo:"studio",preco:680000},
-  {id:4,nome:"Std 04",area:36.03,andar:2,vista:"sem_vista",tipo:"studio",preco:695000},
-  {id:5,nome:"Std 05",area:40.39,andar:2,vista:"sem_vista",tipo:"studio",preco:780000},
-  {id:6,nome:"Cob. A",area:45.76,andar:7,vista:"vista_verde",tipo:"studio",preco:980000},
-  {id:7,nome:"Cob. B",area:46.94,andar:7,vista:"vista_verde",tipo:"studio",preco:980000},
-  {id:8,nome:"Ct. 01",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
-  {id:9,nome:"Ct. 02",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
-  {id:10,nome:"Ct. 03",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
-  {id:11,nome:"Ct. 04",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
+  {id:1,nome:"Std 01",area:40.39,andar:2,vista:"sem_vista",tipo:"studio"},
+  {id:2,nome:"Std 02",area:36.03,andar:2,vista:"sem_vista",tipo:"studio"},
+  {id:3,nome:"Std 03",area:35.28,andar:2,vista:"sem_vista",tipo:"studio"},
+  {id:4,nome:"Std 04",area:36.03,andar:2,vista:"sem_vista",tipo:"studio"},
+  {id:5,nome:"Std 05",area:40.39,andar:2,vista:"sem_vista",tipo:"studio"},
+  {id:6,nome:"Cob. A",area:45.76,andar:7,vista:"vista_verde",tipo:"studio"},
+  {id:7,nome:"Cob. B",area:46.94,andar:7,vista:"vista_verde",tipo:"studio"},
+  {id:8,nome:"Ct. 01",area:45.31,andar:8,vista:"vista_verde",tipo:"studio"},
+  {id:9,nome:"Ct. 02",area:45.31,andar:8,vista:"vista_verde",tipo:"studio"},
+  {id:10,nome:"Ct. 03",area:45.31,andar:8,vista:"vista_verde",tipo:"studio"},
+  {id:11,nome:"Ct. 04",area:45.31,andar:8,vista:"vista_verde",tipo:"studio"},
 ];
 
 function App(){
@@ -174,6 +185,7 @@ function App(){
   const[nid,setNid]=useState(12);
   const[sb,setSb]=useState("y");
   const[sd,setSd]=useState(-1);
+  const[showM,setShowM]=useState(false);
 
   const bd=BAIRROS[proj.bairro]||BAIRROS["Ipanema"];
   const results=useMemo(()=>units.map(u=>calc(u,proj,bd)),[units,proj,bd]);
@@ -183,379 +195,405 @@ function App(){
     return Object.entries(m).sort((a,b)=>+b[0]-+a[0]);
   },[results]);
 
-  const vgv=units.reduce((s,u)=>s+u.area*(proj.precoM2||0),0);
+  const vgv=useMemo(()=>units.reduce((s,u)=>s+u.area*(proj.precoM2||0),0),[units,proj.precoM2]);
   const avgY=results.length?results.reduce((s,r)=>s+r.y,0)/results.length:0;
   const avgA=results.length?results.reduce((s,r)=>s+r.adr,0)/results.length:0;
   const best=results.length?[...results].sort((a,b)=>b.y-a.y)[0]:null;
+  const hasL=proj.adrLobie>0&&proj.occLobie>0;
+  const avgYL=hasL?results.reduce((s,r)=>s+calcL(r,proj).yL,0)/results.length:0;
+  const delta=avgYL-avgY;
+
+  const adrPrev=useMemo(()=>Math.round(ADRREF*Math.pow(bd.di,A)*Math.pow(Math.max(0.55,Math.exp(-0.0035*proj.distPraia)),B)),[bd,proj.distPraia]);
 
   const upP=(f,v)=>setProj(p=>({...p,[f]:['nome','endereco','bairro'].includes(f)?v:+v}));
-  const add=()=>{setUnits(u=>[...u,{id:nid,nome:`UH ${nid}`,area:35,andar:2,vista:"sem_vista",tipo:"studio",preco:700000}]);setNid(n=>n+1);};
+  const add=()=>{setUnits(u=>[...u,{id:nid,nome:`UH ${nid}`,area:35,andar:2,vista:"sem_vista",tipo:"studio"}]);setNid(n=>n+1);};
   const del=id=>setUnits(u=>u.filter(x=>x.id!==id));
   const upU=(id,f,v)=>setUnits(u=>u.map(x=>x.id===id?{...x,[f]:['nome','vista','tipo'].includes(f)?v:+v}:x));
   const ts=f=>{if(sb===f)setSd(d=>-d);else{setSb(f);setSd(-1);}};
 
   return(
-    <div className="shell">
-
+    <div>
       {/* TOPBAR */}
       <div className="topbar">
         <div className="logo">LOBIE <span>Estudo de Rentabilidade</span></div>
         <div style={{display:"flex",gap:6}} className="no-print">
-          {step===3&&<button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button>}
+          {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button></>}
         </div>
       </div>
 
-      {/* STEPS NAV */}
-      <div className="steps-nav no-print">
+      {/* STEP NAV */}
+      <div className="snav no-print">
         {[["1","Projeto",1],["2","Unidades",2],["3","Resultados",3]].map(([n,l,s])=>(
-          <div key={s} className={`step-tab${step===s?" active":step>s?" done":""}`}
-            onClick={()=>step>s&&setStep(s)}>
+          <div key={s} className={`stab${step===s?" active":step>s?" done":""}`} onClick={()=>step>s&&setStep(s)}>
             <div className="snum">{step>s?"✓":n}</div>{l}
           </div>
         ))}
         {step===3&&(
-          <div className="nav-info">
-            <span>{proj.nome}</span>
-            <span style={{color:"var(--border)"}}>·</span>
-            <span>{units.length} UHs</span>
-            <span style={{color:"var(--border)"}}>·</span>
-            <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</span>
+          <div className="snav-info">
+            <span>{proj.nome}</span>·<span>{units.length} UHs</span>·
+            <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b>·
+            <span style={{fontFamily:"'Space Mono',monospace",color:"var(--green)"}}>{pct(avgY)}</span>
+            {hasL&&<>→<b style={{fontFamily:"'Space Mono',monospace",color:"var(--acc)"}}>{pct(avgYL)}</b><span style={{fontFamily:"'Space Mono',monospace",color:delta>=0?"var(--green)":"var(--red)",fontSize:10}}>{delta>=0?" +":""}{pct(delta)}</span></>}
           </div>
         )}
       </div>
 
-      {/* ─── STEP 1 ─── */}
+      {/* ═══ STEP 1 ═══ */}
       {step===1&&(
-        <div className="view step-fade">
-          <div style={{maxWidth:860,margin:"0 auto"}}>
-            <h1 style={{fontSize:26,fontWeight:700,letterSpacing:"-.5px",marginBottom:6}}>Novo Estudo</h1>
-            <p style={{fontSize:13,color:"var(--text2)",marginBottom:28}}>Configure o empreendimento. O bairro determina o DemandIndex automaticamente via AirDNA.</p>
-
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+        <div className="view fade">
+          <div style={{maxWidth:880,margin:"0 auto"}}>
+            <h1 style={{fontSize:24,fontWeight:700,marginBottom:6}}>Novo Estudo</h1>
+            <p style={{fontSize:12,color:"var(--text2)",marginBottom:24}}>O bairro define o DemandIndex via AirDNA LTM. A distância calibra o decaimento espacial intra-bairro (SpatialModifier).</p>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
               <div className="card">
                 <div className="ctitle">Identificação</div>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <FG l="Nome do empreendimento"><input value={proj.nome} onChange={e=>upP('nome',e.target.value)}/></FG>
-                  <FG l="Endereço"><input value={proj.endereco} onChange={e=>upP('endereco',e.target.value)}/></FG>
-                  <FG l="Bairro — define DemandIndex automaticamente">
+                <div style={{display:"flex",flexDirection:"column",gap:11}}>
+                  <F l="Nome do empreendimento"><input value={proj.nome} onChange={e=>upP('nome',e.target.value)}/></F>
+                  <F l="Endereço"><input value={proj.endereco} onChange={e=>upP('endereco',e.target.value)}/></F>
+                  <F l="Bairro — DemandIndex calculado automaticamente">
                     <select value={proj.bairro} onChange={e=>upP('bairro',e.target.value)}>
                       {Object.keys(BAIRROS).map(b=><option key={b}>{b}</option>)}
                     </select>
-                  </FG>
-                  <FG l="Distância da praia (metros)"><input type="number" value={proj.distPraia} onChange={e=>upP('distPraia',e.target.value)}/></FG>
+                  </F>
+                  <F l="Distância da praia (m) — define decaimento espacial intra-bairro">
+                    <input type="number" value={proj.distPraia} onChange={e=>upP('distPraia',e.target.value)}/>
+                  </F>
                 </div>
               </div>
-
-              <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                <div className="card">
-                  <div className="ctitle">Despesas mensais padrão (aplicadas a todas as UHs)</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10}}>
-                    <FG l="Preço/m² (R$)"><input type="number" value={proj.precoM2} onChange={e=>upP('precoM2',e.target.value)}/></FG>
-                    <FG l="Condomínio"><input type="number" value={proj.cond} onChange={e=>upP('cond',e.target.value)}/></FG>
-                    <FG l="Energia"><input type="number" value={proj.energia} onChange={e=>upP('energia',e.target.value)}/></FG>
-                    <FG l="IPTU/mês"><input type="number" value={proj.iptu} onChange={e=>upP('iptu',e.target.value)}/></FG>
-                  </div>
-                </div>
-
-                <div className="card" style={{borderTop:"2px solid var(--accent)"}}>
-                  <div className="ctitle">Cenário Lobie — parâmetros operacionais</div>
-                  <p style={{fontSize:11,color:"var(--text2)",marginBottom:12,fontWeight:500}}>ADR e ocupação que a Lobie arbitra para o cenário gerido. Aparece nos resultados comparado ao modelo natural.</p>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div className="card" style={{borderTop:"2px solid var(--acc)"}}>
+                  <div className="ctitle">Cenário operacional Lobie</div>
+                  <p style={{fontSize:11,color:"var(--text2)",marginBottom:10,lineHeight:1.6}}>ADR e ocupação que a Lobie arbitra para o cenário gerido. Nos resultados, aparece ao lado do modelo natural para quantificar o valor da gestão profissional.</p>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-                    <FG l="ADR Lobie (R$)"><input type="number" value={proj.adrLobie} onChange={e=>upP('adrLobie',e.target.value)} placeholder="Ex: 750"/></FG>
-                    <FG l="Ocupação Lobie (%)"><input type="number" min="1" max="100" step=".1" value={proj.occLobie} onChange={e=>upP('occLobie',e.target.value)} placeholder="Ex: 85"/></FG>
+                    <F l="ADR Lobie (R$)"><input type="number" value={proj.adrLobie} onChange={e=>upP('adrLobie',e.target.value)}/></F>
+                    <F l="Ocupação Lobie (%)"><input type="number" step=".1" value={proj.occLobie} onChange={e=>upP('occLobie',e.target.value)}/></F>
                   </div>
                 </div>
-
-                <div style={{background:"var(--green-bg)",border:"1px solid var(--green-b)",borderRadius:16,padding:"16px 20px"}}>
-                  <div style={{fontSize:10,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"var(--green)",marginBottom:14}}>Parâmetros de Mercado · AirDNA LTM</div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-                    {(()=>{
-                      const decayRef=Math.max(0.55,Math.exp(-0.0035*proj.distPraia));
-                      const adrEst=Math.round(ADRREF*Math.pow(bd.di,A)*Math.pow(decayRef,B));
-                      return [["Bairro",proj.bairro,false,null],["DemandIndex",bd.di.toFixed(3),true,"var(--accent)"],["Ocupação LTM",pct(bd.occ*100),true,"var(--green)"],["ADR estimado",brl(adrEst),true,"var(--accent)"]].map(([l,v,mono,c])=>(
-                        <div key={l} style={{background:"rgba(255,255,255,.7)",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
-                          <div style={{fontFamily:mono?"'Space Mono',monospace":"'Syne',sans-serif",fontSize:mono?13:12,fontWeight:600,color:c||"var(--text)",lineHeight:1}}>{v}</div>
-                          <div style={{fontSize:9,color:"var(--text2)",marginTop:5,fontWeight:600,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
-                        </div>
-                      ));
-                    })()}
+                <div style={{background:"var(--gbg)",border:"1px solid var(--gb)",borderRadius:14,padding:"13px 16px"}}>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--green)",marginBottom:11}}>Parâmetros de mercado · AirDNA LTM</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7}}>
+                    {[["Bairro",proj.bairro,false,null],["DemandIndex",bd.di.toFixed(3),true,"var(--acc)"],["Ocupação LTM",pct(bd.occ*100),true,"var(--green)"],["ADR estimado",brl(adrPrev),true,"var(--acc)"]].map(([l,v,mono,c])=>(
+                      <div key={l} style={{background:"rgba(255,255,255,.8)",borderRadius:9,padding:"8px",textAlign:"center"}}>
+                        <div style={{fontFamily:mono?"'Space Mono',monospace":"inherit",fontSize:mono?12:11,fontWeight:600,color:c||"var(--text)",lineHeight:1}}>{v}</div>
+                        <div style={{fontSize:8,color:"var(--text3)",marginTop:4,fontWeight:700,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
+                      </div>
+                    ))}
                   </div>
-                  <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--green-b)",fontSize:10,color:"#6b9f7a",fontWeight:500,lineHeight:1.7}}>
-                    ADR = R$795 × DI<sup>0.60</sup> × SM<sup>0.40</sup> · Fonte: {today}
+                  <div style={{marginTop:9,paddingTop:9,borderTop:"1px solid var(--gb)",fontSize:9,color:"#6b9f7a",lineHeight:1.7}}>
+                    ADR = R$795 × DI<sup>0.60</sup> × SM<sup>0.40</sup> · SM = decay({proj.distPraia}m) × andar × vista × tipo · Fonte: {today}
                   </div>
                 </div>
               </div>
             </div>
-
-            <div style={{marginTop:24,display:"flex",justifyContent:"flex-end"}}>
+            <div style={{marginTop:20,display:"flex",justifyContent:"flex-end"}}>
               <button className="btn btn-p btn-lg" onClick={()=>setStep(2)}>Configurar Unidades →</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── STEP 2 ─── */}
+      {/* ═══ STEP 2 ═══ */}
       {step===2&&(
-        <div className="view step-fade">
-          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
+        <div className="view fade">
+          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:10}}>
             <div>
-              <h1 style={{fontSize:22,fontWeight:700,letterSpacing:"-.3px"}}>
-                {proj.nome} &nbsp;<span className="badge bb">{units.length} UHs</span>
-              </h1>
-              <p style={{fontSize:12,color:"var(--text2)",marginTop:4}}>{proj.endereco} · {proj.bairro} · DI {bd.di.toFixed(3)} · VGV <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</span></p>
+              <h1 style={{fontSize:20,fontWeight:700}}>{proj.nome} <span className="badge bb2" style={{fontSize:11,verticalAlign:"middle"}}>{units.length} UHs</span></h1>
+              <p style={{fontSize:11,color:"var(--text2)",marginTop:3}}>{proj.endereco} · {proj.bairro} · DI {bd.di.toFixed(3)}</p>
             </div>
-            <button className="btn" onClick={add}>+ Adicionar UH</button>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,padding:"6px 12px"}}>
+                <span style={{fontSize:9,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>Preço/m²</span>
+                <input type="number" value={proj.precoM2} onChange={e=>upP('precoM2',e.target.value)} style={{width:85,borderRadius:7,padding:"4px 7px",fontSize:13,fontFamily:"'Space Mono',monospace",fontWeight:700}}/>
+                <span style={{fontSize:9,color:"var(--text3)",whiteSpace:"nowrap"}}>VGV <b style={{fontFamily:"'Space Mono',monospace",color:"var(--text)",fontSize:11}}>{brl(vgv)}</b></span>
+              </div>
+              <button className="btn" onClick={add}>+ Adicionar UH</button>
+            </div>
           </div>
 
-          <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden"}}>
+          <div style={{background:"#fffbeb",border:"1px solid var(--ab)",borderRadius:10,padding:"9px 14px",marginBottom:12,fontSize:11,color:"#92400e",lineHeight:1.6}}>
+            <b>Preço/m² uniforme:</b> o yield compara unidades na mesma base — revela eficiência operacional pura (área, vista, andar, localização), sem distorção pela precificação do incorporador. Alterações de preço por UH pertencem ao incorporador, não ao modelo Lobie.
+          </div>
+
+          <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,overflow:"hidden"}}>
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}} className="itbl">
-                <thead><tr>{["Nome","Área m²","Andar","Vista","Tipologia","Preço calc.",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+                <thead><tr>{["Nome","Área m²","Andar","Vista","Tipologia","Preço (área × R$/m²)","SM",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {units.map(u=>(
-                    <tr key={u.id}>
-                      <td><input value={u.nome} onChange={e=>upU(u.id,'nome',e.target.value)} style={{width:76}}/></td>
-                      <td><input type="number" step=".01" value={u.area} onChange={e=>upU(u.id,'area',e.target.value)} style={{width:72}}/></td>
-                      <td><input type="number" min="1" max="60" value={u.andar} onChange={e=>upU(u.id,'andar',e.target.value)} style={{width:56}}/></td>
-                      <td><select value={u.vista} onChange={e=>upU(u.id,'vista',e.target.value)} style={{width:130}}>{VISTAS.map(v=><option key={v.key} value={v.key}>{v.label}</option>)}</select></td>
-                      <td><select value={u.tipo} onChange={e=>upU(u.id,'tipo',e.target.value)} style={{width:106}}>{TIPOS.map(t=><option key={t.key} value={t.key}>{t.label}</option>)}</select></td>
-                      <td style={{fontFamily:"'Space Mono',monospace",fontSize:12,color:"var(--text2)",paddingLeft:12}}>{brl(u.area*(proj.precoM2||0))}</td>
-                      <td style={{textAlign:"center"}}>
-                        <button onClick={()=>del(u.id)} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:18,opacity:.5,transition:"opacity .15s",padding:"0 6px"}}
-                          onMouseOver={e=>e.target.style.opacity=1} onMouseOut={e=>e.target.style.opacity=.5}>×</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{padding:"10px 16px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
-              <span style={{fontSize:12,color:"var(--text2)"}}><b style={{color:"var(--text)"}}>{units.length} unidades</b> &nbsp;·&nbsp; VGV <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b></span>
-              <button className="btn" onClick={add} style={{fontSize:11}}>+ UH</button>
-            </div>
-          </div>
-
-          <div style={{marginTop:20,display:"flex",justifyContent:"space-between"}}>
-            <button className="btn" onClick={()=>setStep(1)}>← Voltar</button>
-            <button className="btn btn-p btn-lg" onClick={()=>setStep(3)}>Ver Resultados →</button>
-          </div>
-        </div>
-      )}
-
-      {/* ─── STEP 3 ─── */}
-      {step===3&&(
-        <div className="view step-fade">
-          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:12}}>
-            <div>
-              <h1 style={{fontSize:22,fontWeight:700,letterSpacing:"-.3px",lineHeight:1.1}}>{proj.nome}</h1>
-              <p style={{fontSize:12,color:"var(--text2)",marginTop:4}}>{proj.endereco} &nbsp;·&nbsp; {proj.bairro} &nbsp;·&nbsp; DI {bd.di.toFixed(3)} &nbsp;·&nbsp; {units.length} UHs &nbsp;·&nbsp; {today}</p>
-            </div>
-            <div style={{display:"flex",gap:6}} className="no-print">
-              <button className="btn" onClick={()=>setStep(2)}>← Editar</button>
-              <button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button>
-            </div>
-          </div>
-
-          {/* KPIs */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:10}}>
-            <div className="mkpi">
-              <div className="mkpi-l">Total de UHs</div>
-              <div className="mkpi-v">{units.length}</div>
-              <div className="mkpi-t">VGV {brl(vgv)}</div>
-            </div>
-            <div className="mkpi">
-              <div className="mkpi-l">ADR médio · modelo</div>
-              <div className="mkpi-v">{brl(Math.round(avgA))}</div>
-              <div className="mkpi-t">{pct(bd.occ*100)} occ · {proj.bairro}</div>
-            </div>
-            <div className="mkpi" style={{borderTop:"2px solid var(--green)"}}>
-              <div className="mkpi-l">Yield médio · modelo natural</div>
-              <div className="mkpi-v" style={{color:"var(--green)"}}>{pct(avgY)}</div>
-              <div className="mkpi-t">AirDNA LTM a.a.</div>
-              <div className="mkpi-bar"><div className="mkpi-bar-f" style={{width:Math.min(100,(avgY/15)*100)+"%",background:"var(--green)"}}/></div>
-            </div>
-            <div className="mkpi" style={{borderTop:"2px solid var(--accent)"}}>
-              <div className="mkpi-l">Melhor UH</div>
-              <div className="mkpi-v" style={{fontSize:16}}>{best?.nome??'—'}</div>
-              <div className="mkpi-t">{best?pct(best.y)+" a.a. · "+best.area+"m²":""}</div>
-            </div>
-          </div>
-
-          {/* Cenário Lobie vs Natural */}
-          {proj.adrLobie>0&&proj.occLobie>0&&(()=>{
-            const occL=proj.occLobie/100;
-            const avgYL=results.length?results.reduce((s,r)=>{
-              const recBL=proj.adrLobie*occL*DIAS;
-              const recLL=recBL*(1-OTA);
-              const niL=recLL-proj.cond-proj.energia-proj.iptu;
-              const resL=niL*(1-TXL);
-              return s+(r.preco>0?Math.max(0,resL*12/r.preco*100):0);
-            },0)/results.length:0;
-            const delta=avgYL-avgY;
-            return(
-              <div style={{background:"#f8f8f8",border:"1px solid var(--border)",borderRadius:16,padding:"14px 18px",marginBottom:10,display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12,alignItems:"center"}}>
-                <div>
-                  <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Cenário Lobie</div>
-                  <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>ADR <span style={{fontFamily:"'Space Mono',monospace",color:"var(--text)",fontWeight:600}}>{brl(proj.adrLobie)}</span> &nbsp;·&nbsp; Occ <span style={{fontFamily:"'Space Mono',monospace",color:"var(--text)",fontWeight:600}}>{pct(proj.occLobie)}</span></div>
-                </div>
-                <div style={{textAlign:"center"}}>
-                  <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Modelo natural</div>
-                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:600}}>{pct(avgY)}</div>
-                </div>
-                <div style={{textAlign:"center"}}>
-                  <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Cenário Lobie</div>
-                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:600,color:"var(--accent)"}}>{pct(avgYL)}</div>
-                </div>
-                <div style={{textAlign:"center",background:delta>=0?"var(--green-bg)":"var(--red-bg)",border:`1px solid ${delta>=0?"var(--green-b)":"var(--red-b)"}`,borderRadius:12,padding:"10px 14px"}}>
-                  <div style={{fontSize:10,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:1,marginBottom:4}}>Delta</div>
-                  <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:600,color:delta>=0?"var(--green)":"var(--red)"}}>{delta>=0?"+":""}{pct(delta)}</div>
-                  <div style={{fontSize:10,color:"var(--text2)",marginTop:4}}>valor da gestão Lobie</div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* Legenda */}
-          <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
-            <span style={{fontSize:10,fontWeight:600,color:"var(--text3)",letterSpacing:1,textTransform:"uppercase",marginRight:4}}>Yield:</span>
-            {[14,12,10,8,0].map(y=>{const c=yc(y+.1);return(
-              <span key={y} className={`badge ${c.cls}`} style={{fontSize:10}}>{c.label}</span>
-            );})}
-            {proj.adrLobie>0&&<>
-              <div style={{width:1,height:16,background:"var(--border)",margin:"0 4px"}}/>
-              <span style={{fontSize:10,fontWeight:600,color:"var(--text3)",marginRight:4}}>Esquerda = Modelo Natural · Direita = Cenário Lobie</span>
-            </>}
-          </div>
-
-          {/* HEATMAP DUPLO */}
-          <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:18,marginBottom:14}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
-              <div style={{fontSize:10,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Mapa de Rentabilidade por Pavimento</div>
-              <div style={{display:"flex",gap:12,fontSize:10,fontWeight:600}}>
-                <span style={{color:"var(--text3)"}}>■ Modelo Natural (AirDNA)</span>
-                {proj.adrLobie>0&&<span style={{color:"var(--accent)"}}>■ Cenário Lobie (ADR {brl(proj.adrLobie)} · {pct(proj.occLobie)} occ)</span>}
-              </div>
-            </div>
-
-            {byFloor.map(([floor,fus])=>{
-              const occL=proj.occLobie/100;
-              return(
-                <div key={floor} style={{marginBottom:16}}>
-                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
-                    <span style={{background:"var(--bg3)",borderRadius:8,padding:"2px 10px",fontSize:10,fontWeight:600,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{floor}º andar</span>
-                    <span style={{fontSize:10,color:"var(--text3)",fontWeight:600,whiteSpace:"nowrap"}}>{fus.length} UH{fus.length>1?"s":""}</span>
-                    <div style={{flex:1,height:1,background:"var(--border)"}}/>
-                  </div>
-                  <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-                    {fus.map(r=>{
-                      // Cenário Lobie calc por UH
-                      const recBL=proj.adrLobie*occL*DIAS;
-                      const recLL=recBL*(1-OTA);
-                      const niL=recLL-proj.cond-proj.energia-proj.iptu;
-                      const resL=niL*(1-TXL);
-                      const yL=r.preco>0?Math.max(0,resL*12/r.preco*100):0;
-                      const delta=yL-r.y;
-                      const cn=yc(r.y);
-                      const cl=proj.adrLobie>0?yc(yL):null;
-                      return(
-                        <div key={r.id} style={{minWidth:proj.adrLobie>0?300:160,maxWidth:proj.adrLobie>0?360:184,borderRadius:16,border:"1px solid var(--border)",overflow:"hidden",background:"var(--card)"}}>
-                          {/* Header */}
-                          <div style={{padding:"10px 14px 8px",borderBottom:"1px solid var(--bg3)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                            <span style={{fontSize:13,fontWeight:600}}>{r.nome}</span>
-                            <span style={{fontSize:10,color:"var(--text3)"}}>{r.area}m² · {VISTAS.find(v=>v.key===r.vista)?.short}</span>
-                          </div>
-                          {/* Two columns */}
-                          <div style={{display:"grid",gridTemplateColumns:proj.adrLobie>0?"1fr 1fr":"1fr",gap:0}}>
-                            {/* Natural */}
-                            <div style={{background:cn.bg,padding:"10px 12px",borderRight:proj.adrLobie>0?"1px solid var(--border)":"none"}}>
-                              <div style={{fontSize:9,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Modelo natural</div>
-                              <div style={{fontFamily:"'Space Mono',monospace",fontSize:22,fontWeight:600,color:cn.tc,lineHeight:1,marginBottom:6}}>{pct(r.y)}</div>
-                              <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.8}}>
-                                ADR <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(r.adr)}</span><br/>
-                                <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(Math.round(r.res))}</span>/mês
-                              </div>
-                            </div>
-                            {/* Lobie */}
-                            {proj.adrLobie>0&&cl&&(
-                              <div style={{background:cl.bg,padding:"10px 12px",position:"relative"}}>
-                                <div style={{fontSize:9,fontWeight:600,color:"var(--accent)",textTransform:"uppercase",letterSpacing:.5,marginBottom:4}}>Cenário Lobie</div>
-                                <div style={{fontFamily:"'Space Mono',monospace",fontSize:22,fontWeight:600,color:cl.tc,lineHeight:1,marginBottom:6}}>{pct(yL)}</div>
-                                <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.8}}>
-                                  ADR <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(proj.adrLobie)}</span><br/>
-                                  <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(Math.round(resL))}</span>/mês
-                                </div>
-                                <div style={{position:"absolute",top:8,right:8,background:delta>=0?"var(--green-bg)":"var(--red-bg)",border:`1px solid ${delta>=0?"var(--green-b)":"var(--red-b)"}`,borderRadius:6,padding:"2px 6px",fontSize:9,fontWeight:600,color:delta>=0?"var(--green)":"var(--red)",fontFamily:"'Space Mono',monospace"}}>
-                                  {delta>=0?"+":""}{pct(delta)}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          {/* Footer price */}
-                          <div style={{padding:"6px 14px",background:"var(--bg3)",fontSize:10,color:"var(--text3)",fontFamily:"'Space Mono',monospace",textAlign:"right"}}>
-                            {brl(r.preco)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* RANKING */}
-          <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden"}}>
-            <div style={{padding:"12px 18px",borderBottom:"1px solid var(--border)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:10,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Ranking de Rentabilidade</span>
-              <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>Clique no cabeçalho para ordenar</span>
-            </div>
-            <div style={{overflowX:"auto"}}>
-              <table className="tbl">
-                <thead>
-                  <tr>
-                    <th>#</th><th>UH</th>
-                    {[["Área","area"],["Andar","andar"],["ADR","adr"],["Resultado/mês","res"],["Yield natural","y"]].map(([h,f])=>(
-                      <th key={f} className={`sortable${sb===f?" sorted":""}`} onClick={()=>ts(f)}>
-                        {h} <span style={{opacity:.5}}>{sb===f?(sd===-1?"↓":"↑"):"·"}</span>
-                      </th>
-                    ))}
-                    {proj.adrLobie>0&&<th style={{color:"var(--accent)"}}>Yield Lobie</th>}
-                    {proj.adrLobie>0&&<th style={{color:"var(--green)"}}>Delta</th>}
-                    <th>Vista</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map((r,i)=>{
-                    const cn=yc(r.y);
-                    const occL=proj.occLobie/100;
-                    const recBL=proj.adrLobie*occL*DIAS;
-                    const recLL=recBL*(1-OTA);
-                    const niL=recLL-proj.cond-proj.energia-proj.iptu;
-                    const resL=niL*(1-TXL);
-                    const yL=r.preco>0?Math.max(0,resL*12/r.preco*100):0;
-                    const cl=yc(yL);
-                    const delta=yL-r.y;
+                  {units.map(u=>{
+                    const{SM}=sm(u,proj.distPraia);
                     return(
-                      <tr key={r.id}>
-                        <td style={{color:"var(--text3)",fontSize:11,fontFamily:"'Space Mono',monospace"}}>#{i+1}</td>
-                        <td style={{fontWeight:600}}>{r.nome}</td>
-                        <td style={{fontFamily:"'Space Mono',monospace",color:"var(--text2)"}}>{r.area}m²</td>
-                        <td style={{color:"var(--text2)",textAlign:"center"}}>{r.andar}º</td>
-                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(r.adr)}</td>
-                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(r.res))}</td>
-                        <td><span className={`badge ${cn.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:12}}>{pct(r.y)}</span></td>
-                        {proj.adrLobie>0&&<td><span className={`badge ${cl.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:12}}>{pct(yL)}</span></td>}
-                        {proj.adrLobie>0&&<td><span style={{fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:600,color:delta>=0?"var(--green)":"var(--red)"}}>{delta>=0?"+":""}{pct(delta)}</span></td>}
-                        <td style={{color:"var(--text2)",fontSize:12}}>{VISTAS.find(v=>v.key===r.vista)?.label}</td>
+                      <tr key={u.id}>
+                        <td><input value={u.nome} onChange={e=>upU(u.id,'nome',e.target.value)} style={{width:70}}/></td>
+                        <td><input type="number" step=".01" value={u.area} onChange={e=>upU(u.id,'area',e.target.value)} style={{width:66}}/></td>
+                        <td><input type="number" min="1" max="60" value={u.andar} onChange={e=>upU(u.id,'andar',e.target.value)} style={{width:50}}/></td>
+                        <td><select value={u.vista} onChange={e=>upU(u.id,'vista',e.target.value)} style={{width:125}}>{VISTAS.map(v=><option key={v.key} value={v.key}>{v.label}</option>)}</select></td>
+                        <td><select value={u.tipo} onChange={e=>upU(u.id,'tipo',e.target.value)} style={{width:100}}>{TIPOS.map(t=><option key={t.key} value={t.key}>{t.label}</option>)}</select></td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontSize:11,color:"var(--text2)"}}>{brl(u.area*(proj.precoM2||0))}</td>
+                        <td>
+                          <span style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,color:SM>0.8?"var(--green)":SM>0.65?"var(--amber)":"var(--red)"}}>{SM.toFixed(3)}</span>
+                        </td>
+                        <td style={{textAlign:"center"}}>
+                          <button onClick={()=>del(u.id)} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:16,opacity:.5,padding:"0 4px"}}
+                            onMouseOver={e=>e.target.style.opacity=1} onMouseOut={e=>e.target.style.opacity=.5}>×</button>
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div style={{padding:"10px 18px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-              <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>Modelo Cobb-Douglas α=0.60 / β=0.40 · AirDNA LTM Mar/2026 · Sazonalidade BD Repasse Lobie 2025</span>
-              <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>Confidencial · {today}</span>
+            <div style={{padding:"8px 13px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+              <span style={{fontSize:10,color:"var(--text2)"}}><b>{units.length} unidades</b> · VGV <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b> · SM = SpatialModifier (quanto a UH aproveita do DI do bairro)</span>
+              <button className="btn" onClick={add} style={{fontSize:10}}>+ UH</button>
+            </div>
+          </div>
+
+          <div style={{marginTop:16,display:"flex",justifyContent:"space-between"}}>
+            <button className="btn" onClick={()=>setStep(1)}>← Voltar</button>
+            <button className="btn btn-p btn-lg" onClick={()=>setStep(3)}>Ver Resultados →</button>
+          </div>
+        </div>
+      )}
+
+      {/* ═══ STEP 3 ═══ */}
+      {step===3&&(
+        <div className="view fade">
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:14,flexWrap:"wrap",gap:10}}>
+            <div>
+              <h1 style={{fontSize:20,fontWeight:700,lineHeight:1.1}}>{proj.nome}</h1>
+              <p style={{fontSize:11,color:"var(--text2)",marginTop:3}}>{proj.endereco} · {proj.bairro} · DI {bd.di.toFixed(3)} · {units.length} UHs · {today}</p>
+            </div>
+            <div style={{display:"flex",gap:6}} className="no-print">
+              <button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button>
+              <button className="btn" onClick={()=>setStep(2)}>← Editar</button>
+              <button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button>
+            </div>
+          </div>
+
+          {/* ── METODOLOGIA ── */}
+          {showM&&(
+            <div style={{background:"#f8f9ff",border:"1px solid #dde4ff",borderRadius:14,padding:18,marginBottom:14}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#4a5aaa",marginBottom:14}}>Metodologia — Cobb-Douglas Hierárquico</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,fontSize:11}}>
+                <div>
+                  <div style={{fontWeight:700,marginBottom:7,fontSize:10,textTransform:"uppercase",letterSpacing:.5}}>Fórmula central</div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"11px 13px",fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:2.1,border:"1px solid #dde4ff"}}>
+                    ADR = R$795 × DI<sup>α=0.60</sup> × SM<sup>β=0.40</sup><br/>
+                    SM = decay × floor × vista × tipo<br/>
+                    decay = max(0.55, e<sup>−0.0035×d</sup>)
+                  </div>
+                  <div style={{marginTop:9,fontSize:10,color:"var(--text2)",lineHeight:1.9}}>
+                    <b>α=0.60:</b> demanda do bairro domina<br/>
+                    <b>β=0.40:</b> atributos físicos da UH<br/>
+                    <b>Piso 0.55:</b> mínimo de mercado não-praia<br/>
+                    <b>floor +0.5%/andar</b> acima do 3º<br/>
+                    <b>DRE:</b> OTA 16.5% · Lobie 12% do NI
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontWeight:700,marginBottom:7,fontSize:10,textTransform:"uppercase",letterSpacing:.5}}>DemandIndex — {proj.bairro}</div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"11px 13px",border:"1px solid #dde4ff"}}>
+                    {[["DemandIndex",bd.di.toFixed(3),"var(--acc)",bd.di*100],["Ocupação LTM",pct(bd.occ*100),"var(--green)",(bd.occ/0.651)*100],["ADR ref. Ipanema","R$795","var(--text2)",100],["OCC ref. Ipanema","65.1%","var(--text2)",100]].map(([l,v,c,w])=>(
+                      <div key={l} style={{marginBottom:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
+                          <span style={{color:"var(--text2)"}}>{l}</span>
+                          <b style={{fontFamily:"'Space Mono',monospace",color:c}}>{v}</b>
+                        </div>
+                        <div className="mbar"><div className="mbar-f" style={{width:Math.min(100,w)+"%",background:c,opacity:.5}}/></div>
+                      </div>
+                    ))}
+                    <div style={{fontSize:9,color:"var(--text3)",marginTop:6,lineHeight:1.6}}>Fonte: AirDNA LTM 21/03/2026<br/>DI = 0.40×occ + 0.35×revpar + 0.25×score</div>
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontWeight:700,marginBottom:7,fontSize:10,textTransform:"uppercase",letterSpacing:.5}}>Prêmios calibrados (SAL Ipanema)</div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"11px 13px",border:"1px solid #dde4ff"}}>
+                    <div style={{fontSize:9,fontWeight:700,color:"var(--text3)",marginBottom:6,textTransform:"uppercase",letterSpacing:.5}}>Vista</div>
+                    {VISTAS.map(v=>(
+                      <div key={v.key} style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:4}}>
+                        <span style={{color:"var(--text2)"}}>{v.label}</span>
+                        <b style={{fontFamily:"'Space Mono',monospace",color:v.m>=1.5?"var(--green)":v.m>=1.15?"var(--amber)":"var(--text3)"}}>{v.desc} (×{v.m.toFixed(2)})</b>
+                      </div>
+                    ))}
+                    <div style={{borderTop:"1px solid var(--bg3)",marginTop:6,paddingTop:6}}>
+                      <div style={{fontSize:9,fontWeight:700,color:"var(--text3)",marginBottom:5,textTransform:"uppercase",letterSpacing:.5}}>Tipologia</div>
+                      {TIPOS.map(t=>(
+                        <div key={t.key} style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:4}}>
+                          <span style={{color:"var(--text2)"}}>{t.label}</span>
+                          <b style={{fontFamily:"'Space Mono',monospace"}}>{t.desc} (×{t.m.toFixed(2)})</b>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{marginTop:8,fontSize:9,color:"var(--text2)",lineHeight:1.7}}>Validação: MAPE 2.8% (SAL Ipanema interno), 10.3% (vista mar) · Meta MAPE &lt;15%</div>
+                </div>
+              </div>
+              <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid #dde4ff",display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:7}}>
+                {[["Rec. Bruta","ADR × OCC × 30.42","var(--text)"],["− OTA 16.5%","Plataformas + ISS","var(--red)"],["Rec. Líquida","Bruta × 0.835","var(--text)"],["− Despesas","Cond + Energia + IPTU","var(--amber)"],["− Taxa Lobie","12% do NI","var(--acc)"],["= Resultado","NI × 88%","var(--green)"]].map(([t,d,c])=>(
+                  <div key={t} style={{background:"#fff",borderRadius:7,padding:"7px 9px",border:"1px solid #dde4ff"}}>
+                    <div style={{fontWeight:700,color:c,fontSize:10,marginBottom:2}}>{t}</div>
+                    <div style={{color:"var(--text2)",fontSize:9,lineHeight:1.4}}>{d}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* KPIs */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:9,marginBottom:9}}>
+            <div className="mkpi"><div className="mkpi-l">Total de UHs</div><div className="mkpi-v">{units.length}</div><div className="mkpi-t">VGV {brl(vgv)}</div></div>
+            <div className="mkpi"><div className="mkpi-l">ADR médio estimado</div><div className="mkpi-v">{brl(Math.round(avgA))}</div><div className="mkpi-t">{pct(bd.occ*100)} occ · {proj.bairro}</div></div>
+            <div className="mkpi" style={{borderTop:"2px solid var(--green)"}}>
+              <div className="mkpi-l">Yield médio · modelo natural</div>
+              <div className="mkpi-v" style={{color:"var(--green)"}}>{pct(avgY)}</div>
+              <div className="mkpi-t">AirDNA LTM a.a.</div>
+              <div className="mkpi-bar"><div className="mkpi-bar-f" style={{width:Math.min(100,(avgY/18)*100)+"%",background:"var(--green)"}}/></div>
+            </div>
+            <div className="mkpi" style={{borderTop:"2px solid var(--acc)"}}>
+              <div className="mkpi-l">Melhor UH</div>
+              <div className="mkpi-v" style={{fontSize:14}}>{best?.nome??'—'}</div>
+              <div className="mkpi-t">{best?pct(best.y)+" a.a. · "+best.area+"m²":""}</div>
+            </div>
+          </div>
+
+          {/* Comparativo */}
+          {hasL&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:9,marginBottom:11,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:13,padding:"13px 15px",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--text3)",marginBottom:5}}>Cenário Lobie</div>
+                <div style={{fontSize:11,color:"var(--text2)"}}>ADR <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(proj.adrLobie)}</b> · Occ <b style={{fontFamily:"'Space Mono',monospace"}}>{pct(proj.occLobie)}</b></div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--text3)",marginBottom:3}}>Modelo Natural</div>
+                <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700}}>{pct(avgY)}</div>
+              </div>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--acc)",marginBottom:3}}>Cenário Lobie</div>
+                <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700}}>{pct(avgYL)}</div>
+              </div>
+              <div style={{textAlign:"center",background:delta>=0?"var(--gbg)":"var(--rbg)",border:`1px solid ${delta>=0?"var(--gb)":"var(--rb)"}`,borderRadius:11,padding:"9px 12px"}}>
+                <div style={{fontSize:9,fontWeight:700,textTransform:"uppercase",letterSpacing:.8,color:"var(--text3)",marginBottom:3}}>Delta</div>
+                <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700,color:delta>=0?"var(--green)":"var(--red)"}}>{delta>=0?"+":""}{pct(delta)}</div>
+                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>valor da gestão Lobie</div>
+              </div>
+            </div>
+          )}
+
+          {/* Legenda */}
+          <div style={{display:"flex",gap:5,marginBottom:11,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:9,fontWeight:700,color:"var(--text3)",letterSpacing:.8,textTransform:"uppercase",marginRight:3}}>Yield a.a.:</span>
+            {[14,12,10,8,0].map(y=>{const c=yc(y+.1);return(<span key={y} className={`badge ${c.cls}`} style={{fontSize:9}}>{y>=14?"≥14%":y>=12?"≥12%":y>=10?"≥10%":y>=8?"≥8%":"<8%"}</span>);})}
+            {hasL&&<><div style={{width:1,height:13,background:"var(--border)",margin:"0 5px"}}/>
+              <span style={{fontSize:9,color:"var(--text3)",fontWeight:600}}>Esq. = Modelo Natural · Dir. = Cenário Lobie</span>
+            </>}
+          </div>
+
+          {/* HEATMAP */}
+          <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:14,padding:15,marginBottom:13}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:13,flexWrap:"wrap",gap:7}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Mapa de Rentabilidade por Pavimento</div>
+              {hasL&&<div style={{fontSize:9,fontWeight:600,display:"flex",gap:10}}><span style={{color:"var(--text3)"}}>■ AirDNA LTM</span><span style={{color:"var(--acc)"}}>■ Cenário Lobie · ADR {brl(proj.adrLobie)} · {pct(proj.occLobie)}</span></div>}
+            </div>
+            {byFloor.map(([floor,fus])=>(
+              <div key={floor} style={{marginBottom:13}}>
+                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:9}}>
+                  <span style={{background:"var(--bg3)",borderRadius:6,padding:"1px 9px",fontSize:9,fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{floor}º andar</span>
+                  <span style={{fontSize:9,color:"var(--text3)",fontWeight:600}}>{fus.length} UH{fus.length>1?"s":""}</span>
+                  <div style={{flex:1,height:1,background:"var(--border)"}}/>
+                </div>
+                <div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
+                  {fus.map(r=>{
+                    const cn=yc(r.y);
+                    const{resL,yL}=calcL(r,proj);
+                    const cl=yc(yL);
+                    const delt=yL-r.y;
+                    return(
+                      <div key={r.id} className="ucard" style={{minWidth:hasL?278:152,maxWidth:hasL?340:180}}>
+                        <div style={{padding:"8px 11px 7px",borderBottom:"1px solid var(--bg3)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <b style={{fontSize:12}}>{r.nome}</b>
+                          <span style={{fontSize:9,color:"var(--text3)"}}>{r.area}m² · {VISTAS.find(v=>v.key===r.vista)?.short} · SM {r.SM.toFixed(2)}</span>
+                        </div>
+                        <div style={{display:"grid",gridTemplateColumns:hasL?"1fr 1fr":"1fr"}}>
+                          <div style={{background:cn.bg,padding:"9px 11px",borderRight:hasL?"1px solid var(--border)":"none"}}>
+                            <div style={{fontSize:8,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,marginBottom:3}}>Modelo natural</div>
+                            <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700,color:cn.tc,lineHeight:1,marginBottom:5}}>{pct(r.y)}</div>
+                            <div style={{fontSize:9,color:"var(--text2)",lineHeight:1.8}}>
+                              ADR <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(r.adr)}</b><br/>
+                              <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(Math.round(r.res))}</b>/mês
+                            </div>
+                          </div>
+                          {hasL&&(
+                            <div style={{background:cl.bg,padding:"9px 11px",position:"relative"}}>
+                              <div style={{fontSize:8,fontWeight:700,color:"var(--acc)",textTransform:"uppercase",letterSpacing:.5,marginBottom:3}}>Cenário Lobie</div>
+                              <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700,color:cl.tc,lineHeight:1,marginBottom:5}}>{pct(yL)}</div>
+                              <div style={{fontSize:9,color:"var(--text2)",lineHeight:1.8}}>
+                                ADR <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(proj.adrLobie)}</b><br/>
+                                <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(Math.round(resL))}</b>/mês
+                              </div>
+                              <div style={{position:"absolute",top:7,right:7,background:delt>=0?"var(--gbg)":"var(--rbg)",border:`1px solid ${delt>=0?"var(--gb)":"var(--rb)"}`,borderRadius:5,padding:"2px 6px",fontSize:8,fontWeight:700,color:delt>=0?"var(--green)":"var(--red)",fontFamily:"'Space Mono',monospace"}}>
+                                {delt>=0?"+":""}{pct(delt)}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div style={{padding:"4px 11px",background:"var(--bg3)",fontSize:8,color:"var(--text3)",fontFamily:"'Space Mono',monospace",textAlign:"right"}}>{brl(r.preco)} · R${Math.round(proj.precoM2)}/m²</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* RANKING */}
+          <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,overflow:"hidden"}}>
+            <div style={{padding:"10px 15px",borderBottom:"1px solid var(--border)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Ranking de Rentabilidade</span>
+              <span style={{fontSize:9,color:"var(--text3)"}}>Clique no cabeçalho para ordenar · menor área = maior yield a preço/m² uniforme</span>
+            </div>
+            <div style={{overflowX:"auto"}}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>#</th><th>UH</th>
+                    {[["Área","area"],["Andar","andar"],["SM","SM"],["ADR","adr"],["Res./mês","res"],["Yield natural","y"]].map(([h,f])=>(
+                      <th key={f} className={`s${sb===f?" act":""}`} onClick={()=>ts(f)}>
+                        {h}{sb===f?<span style={{opacity:.4}}>{sd===-1?" ↓":" ↑"}</span>:<span style={{opacity:.2}}> ·</span>}
+                      </th>
+                    ))}
+                    {hasL&&<th style={{color:"var(--acc)"}}>Yield Lobie</th>}
+                    {hasL&&<th style={{color:"var(--green)"}}>Delta</th>}
+                    <th>Vista</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((r,i)=>{
+                    const cn=yc(r.y);
+                    const{yL}=calcL(r,proj);
+                    const cl=yc(yL);
+                    const delt=yL-r.y;
+                    return(
+                      <tr key={r.id}>
+                        <td style={{color:"var(--text3)",fontSize:10,fontFamily:"'Space Mono',monospace"}}>#{i+1}</td>
+                        <td style={{fontWeight:700}}>{r.nome}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",color:"var(--text2)"}}>{r.area}m²</td>
+                        <td style={{color:"var(--text2)",textAlign:"center"}}>{r.andar}º</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontSize:10,color:r.SM>0.8?"var(--green)":r.SM>0.65?"var(--amber)":"var(--red)"}}>{r.SM.toFixed(3)}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(r.adr)}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(r.res))}</td>
+                        <td><span className={`badge ${cn.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:10}}>{pct(r.y)}</span></td>
+                        {hasL&&<td><span className={`badge ${cl.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:10}}>{pct(yL)}</span></td>}
+                        {hasL&&<td><b style={{fontFamily:"'Space Mono',monospace",fontSize:10,color:delt>=0?"var(--green)":"var(--red)"}}>{delt>=0?"+":""}{pct(delt)}</b></td>}
+                        <td style={{color:"var(--text2)",fontSize:10}}>{VISTAS.find(v=>v.key===r.vista)?.label}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{padding:"8px 15px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:7}}>
+              <span style={{fontSize:9,color:"var(--text3)",fontWeight:600}}>Modelo Cobb-Douglas α=0.60 / β=0.40 · AirDNA LTM Mar/2026 · Sazonalidade BD Repasse Lobie 2025</span>
+              <span style={{fontSize:9,color:"var(--text3)",fontWeight:600}}>Confidencial · {today}</span>
             </div>
           </div>
 
@@ -565,10 +603,10 @@ function App(){
   );
 }
 
-function FG({l,children}){
+function F({l,children}){
   return(
-    <div>
-      <div style={{fontSize:10,color:"var(--text2)",marginBottom:5,fontWeight:600,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
+    <div className="fg">
+      <label>{l}</label>
       {children}
     </div>
   );
