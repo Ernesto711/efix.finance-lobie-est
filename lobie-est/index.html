@@ -1,611 +1,483 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>efixDI+ Protocol Dashboard</title>
-    <link rel="icon" type="image/jpeg" href="../apppp/logo_efix_400x400.jpg">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --black: #000000;
-            --white: #ffffff;
-            --gray-100: #f5f5f5;
-            --gray-200: #e5e5e5;
-            --gray-300: #d4d4d4;
-            --gray-400: #a3a3a3;
-            --gray-500: #737373;
-            --gray-600: #525252;
-            --gray-700: #404040;
-            --gray-800: #262626;
-            --gray-900: #171717;
-            --green: #22c55e;
-            --green-bg: #f0fdf4;
-            --red: #ef4444;
-            --red-bg: #fef2f2;
-            --yellow: #f59e0b;
-            --yellow-bg: #fffbeb;
-            --blue: #3b82f6;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LOBIE | Estudo de Rentabilidade</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root{
+  --bg:#ffffff;--bg2:#fafafa;--bg3:#efefef;--card:#ffffff;
+  --border:#d4d4d4;--border2:#e5e5e5;
+  --text:#0a0a0a;--text2:#525252;--text3:#a3a3a3;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-b:#bbf7d0;
+  --red:#dc2626;--red-bg:#fef2f2;--red-b:#fecaca;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-b:#fde68a;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-b:#bfdbfe;
+  --cyan:#0891b2;--purple:#7c3aed;--accent:#000000;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;font-family:'Syne',sans-serif;background:var(--bg);color:var(--text)}
+.shell{display:flex;flex-direction:column;min-height:100vh}
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(255,255,255,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);position:sticky;top:0;height:48px;z-index:100;flex-shrink:0}
+.logo{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent);letter-spacing:2px;text-transform:uppercase}
+.logo span{color:var(--text2);font-weight:400;font-size:11px;margin-left:8px;letter-spacing:1px;text-transform:uppercase}
 
-        body {
-            font-family: 'Syne', -apple-system, sans-serif;
-            background: var(--white);
-            color: var(--black);
-            line-height: 1.7;
-            min-height: 100vh;
-        }
+.steps-nav{display:flex;gap:0;padding:0 24px;background:var(--bg);border-bottom:1px solid var(--border);height:38px;flex-shrink:0;align-items:stretch}
+.step-tab{padding:0 20px;font-size:13px;font-weight:700;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;letter-spacing:.3px;display:flex;align-items:center;gap:7px}
+.step-tab:hover{color:var(--text)}
+.step-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.step-tab.done{color:var(--green);cursor:pointer}
+.snum{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:var(--bg3);color:var(--text2);flex-shrink:0}
+.step-tab.active .snum{background:var(--accent);color:#fff}
+.step-tab.done .snum{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
+.nav-info{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2);font-weight:700;padding-right:4px}
 
-        ::selection { background: var(--black); color: var(--white); }
+.btn{padding:6px 14px;border-radius:50px;border:1px solid var(--border);font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;background:var(--bg);color:var(--text);letter-spacing:.3px;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn-p{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-p:hover{background:#333}
+.btn-lg{padding:10px 28px;font-size:13px}
 
-        /* Nav */
-        nav {
-            position: fixed; top: 0; left: 0; right: 0;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--gray-200);
-            z-index: 1000; padding: 1rem 2rem;
-        }
+input,select{background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:12px;font-size:13px;width:100%;font-family:'Syne',sans-serif;outline:none;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--accent);background:var(--bg)}
+select option{background:#fff}
+input[type=number]::-webkit-inner-spin-button{opacity:.3}
 
-        .nav-content {
-            max-width: 1400px; margin: 0 auto;
-            display: flex; justify-content: space-between; align-items: center;
-        }
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;transition:border-color .2s}
+.card:hover{border-color:var(--accent)}
+.ctitle{font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--text2);margin-bottom:14px}
 
-        .nav-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--black); }
-        .nav-logo img { height: 32px; width: auto; }
-        .nav-logo span { font-weight: 800; font-size: 1.1rem; letter-spacing: -0.02em; }
+.badge{font-size:11px;padding:3px 10px;border-radius:50px;font-weight:700;letter-spacing:.3px}
+.bg{background:var(--green-bg);color:var(--green);border:1px solid var(--green-b)}
+.br{background:var(--red-bg);color:var(--red);border:1px solid var(--red-b)}
+.ba{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-b)}
+.bb{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-b)}
 
-        .nav-right { display: flex; align-items: center; gap: 2rem; }
+.mkpi{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:12px 14px;transition:border-color .2s;overflow:hidden}
+.mkpi:hover{border-color:var(--accent)}
+.mkpi-l{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:800}
+.mkpi-v{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;margin:4px 0;line-height:1}
+.mkpi-t{font-size:10px;color:var(--text3);font-weight:600}
+.mkpi-bar{height:4px;background:var(--bg3);border-radius:2px;margin-top:8px;overflow:hidden}
+.mkpi-bar-f{height:100%;border-radius:2px;transition:width .8s}
 
-        .nav-links { display: flex; gap: 2rem; list-style: none; }
-        .nav-links a {
-            color: var(--gray-600); text-decoration: none; font-size: 0.875rem;
-            font-weight: 500; letter-spacing: 0.02em; transition: color 0.2s;
-        }
-        .nav-links a:hover, .nav-links a.active { color: var(--black); }
+.ucard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;transition:transform .15s,box-shadow .15s,border-color .15s}
+.ucard:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.07);border-color:var(--accent)}
 
-        .nav-badge {
-            display: inline-flex; align-items: center; gap: 6px;
-            background: var(--gray-100); padding: 6px 14px;
-            border-radius: 50px; font-size: 0.75rem; color: var(--gray-600); font-weight: 600;
-        }
-        .nav-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:800;color:var(--text2);padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;cursor:default}
+.tbl th.sortable{cursor:pointer}.tbl th.sortable:hover{color:var(--text)}
+.tbl th.sorted{color:var(--accent)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--bg3)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tbody tr:hover td{background:var(--bg2)}
 
-        /* Container */
-        .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+.itbl th{font-size:10px;text-transform:uppercase;letter-spacing:.8px;font-weight:800;color:var(--text2);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--bg2)}
+.itbl td{padding:6px 10px;border-bottom:1px solid var(--bg3)}
+.itbl td input,.itbl td select{border-radius:8px;padding:6px 9px;font-size:12px}
+.itbl tbody tr:nth-child(even) td{background:rgba(0,0,0,.013)}
 
-        /* Page Header */
-        .page-header { padding: 7rem 0 2rem; text-align: center; }
-        .page-header h1 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
-        .page-header p { color: var(--gray-500); font-size: 1.1rem; }
+.view{padding:20px 24px;flex:1}
+.step-fade{animation:fadeUp .25s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 
-        /* KPI Row */
-        .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 2rem; }
-        @media (max-width: 900px) { .kpi-grid { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 600px) { .kpi-grid { grid-template-columns: 1fr; } }
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg3)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-        .kpi {
-            background: var(--white); border: 1px solid var(--gray-200);
-            border-radius: 16px; padding: 1.5rem; transition: all 0.3s;
-        }
-        .kpi:hover { border-color: var(--black); box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
-        .kpi-label {
-            font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
-            color: var(--gray-500); margin-bottom: 8px; font-weight: 600;
-        }
-        .kpi-value { font-family: 'Space Mono', monospace; font-size: 1.7rem; font-weight: 700; }
-        .kpi-sub { font-size: 0.75rem; color: var(--gray-400); margin-top: 2px; }
-
-        /* Tabs */
-        .tabs {
-            display: flex; background: var(--gray-100); border-radius: 10px;
-            padding: 4px; margin-bottom: 2rem;
-        }
-        .tab {
-            flex: 1; padding: 0.75rem; text-align: center; border-radius: 8px;
-            font-weight: 600; font-size: 0.875rem; cursor: pointer; transition: all 0.2s;
-            border: none; background: transparent; font-family: inherit; color: var(--gray-500);
-        }
-        .tab.active { background: var(--white); box-shadow: 0 2px 8px rgba(0,0,0,0.1); color: var(--black); }
-
-        /* Cards */
-        .card {
-            background: var(--white); border: 1px solid var(--gray-200);
-            border-radius: 16px; padding: 2rem; transition: all 0.3s; margin-bottom: 1.5rem;
-        }
-        .card:hover { border-color: var(--black); box-shadow: 0 8px 30px rgba(0,0,0,0.06); }
-        .card-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 8px; }
-        .card-meta { font-size: 0.78rem; color: var(--gray-500); margin-bottom: 1rem; }
-
-        /* Table */
-        .tbl { width: 100%; border-collapse: collapse; }
-        .tbl th {
-            text-align: left; padding: 12px 16px; background: var(--gray-100);
-            font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em;
-            color: var(--gray-500); font-weight: 600; border-bottom: 1px solid var(--gray-200);
-        }
-        .tbl th:first-child { border-radius: 8px 0 0 0; }
-        .tbl th:last-child { border-radius: 0 8px 0 0; }
-        .tbl td { padding: 12px 16px; border-bottom: 1px solid var(--gray-100); font-size: 0.88rem; }
-        .tbl tr:hover td { background: var(--gray-100); }
-        .tbl tr.highlight td { background: #f0fdf4; }
-        .tbl .mono { font-family: 'Space Mono', monospace; }
-
-        /* Badge */
-        .badge-sm {
-            display: inline-block; padding: 2px 10px; border-radius: 50px;
-            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.03em;
-        }
-        .badge-green { background: var(--green-bg); color: var(--green); }
-        .badge-yellow { background: var(--yellow-bg); color: var(--yellow); }
-        .badge-red { background: var(--red-bg); color: var(--red); }
-
-        /* Bar Chart */
-        .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-        .bar-label { width: 140px; font-size: 0.8rem; color: var(--gray-600); flex-shrink: 0; }
-        .bar-track { flex: 1; background: var(--gray-100); border-radius: 8px; height: 32px; overflow: hidden; }
-        .bar-fill {
-            height: 100%; border-radius: 8px; display: flex; align-items: center;
-            justify-content: flex-end; padding-right: 12px;
-            transition: width 1s cubic-bezier(.23,1,.32,1);
-        }
-        .bar-fill-text { font-family: 'Space Mono', monospace; font-size: 0.72rem; font-weight: 700; color: var(--white); }
-        .bar-end { width: 100px; text-align: right; font-size: 0.75rem; color: var(--gray-500); font-family: 'Space Mono', monospace; }
-
-        /* Stress Chips */
-        .stress-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; }
-        .stress-chip {
-            padding: 8px 16px; background: var(--gray-100); border: 2px solid transparent;
-            border-radius: 8px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
-            transition: all 0.2s; font-family: inherit; color: var(--gray-600);
-        }
-        .stress-chip:hover { border-color: var(--gray-300); }
-        .stress-chip.active { background: var(--black); color: var(--white); border-color: var(--black); }
-
-        /* Matrix */
-        .matrix { width: 100%; border-collapse: separate; border-spacing: 4px; }
-        .matrix th { padding: 8px; font-size: 0.7rem; color: var(--gray-500); font-weight: 600; text-align: center; }
-        .matrix td {
-            padding: 8px 6px; text-align: center; border-radius: 8px;
-            font-family: 'Space Mono', monospace; font-size: 0.78rem; font-weight: 700;
-        }
-        .matrix .th-left { text-align: left; }
-
-        /* Info Box */
-        .info-box {
-            padding: 1rem 1.25rem; border-radius: 12px; margin-top: 1.5rem;
-        }
-        .info-box.green { background: var(--green-bg); border: 1px solid #bbf7d0; }
-        .info-box .info-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 4px; }
-        .info-box .info-text { font-size: 0.78rem; color: var(--gray-600); line-height: 1.5; }
-
-        /* Protocol List */
-        .proto-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 12px 16px; background: var(--gray-100); border-radius: 12px; margin-bottom: 8px;
-            transition: all 0.2s;
-        }
-        .proto-item:hover { background: var(--gray-200); }
-        .proto-name { font-weight: 600; font-size: 0.88rem; }
-        .proto-addr { font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--gray-500); }
-        .proto-desc { font-size: 0.72rem; color: var(--gray-400); }
-
-        /* Grid helpers */
-        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
-        @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
-
-        /* Backend services grid */
-        .svc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        @media (max-width: 700px) { .svc-grid { grid-template-columns: 1fr; } }
-        .svc-item { background: var(--gray-100); border-radius: 12px; padding: 14px; }
-        .svc-name { font-weight: 600; font-size: 0.85rem; margin-bottom: 2px; }
-        .svc-desc { font-size: 0.72rem; color: var(--gray-500); }
-
-        /* Terminal */
-        .terminal {
-            background: var(--gray-900); border-radius: 12px; padding: 1.25rem;
-            font-family: 'Space Mono', monospace; font-size: 0.72rem; line-height: 1.8;
-            max-height: 380px; overflow-y: auto; color: #a3a3a3;
-        }
-        .t-green { color: #4ade80; }
-        .t-yellow { color: #facc15; }
-        .t-red { color: #f87171; }
-        .t-white { color: #f5f5f5; }
-        .t-dim { color: #737373; }
-
-        .btn-term {
-            padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 0.82rem;
-            cursor: pointer; transition: all 0.2s; font-family: inherit; border: none;
-        }
-        .btn-black { background: var(--black); color: var(--white); }
-        .btn-black:hover { background: var(--gray-800); transform: translateY(-1px); }
-        .btn-outline { background: var(--white); color: var(--gray-600); border: 2px solid var(--gray-300); }
-        .btn-outline:hover { border-color: var(--black); color: var(--black); }
-
-        /* Footer */
-        footer {
-            background: var(--black); color: var(--white);
-            padding: 2rem; margin-top: 4rem; text-align: center;
-            font-size: 0.82rem; color: var(--gray-400);
-        }
-        footer a { color: var(--gray-300); text-decoration: none; }
-        footer a:hover { color: var(--white); }
-
-        /* Tab panels */
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-    </style>
+@media print{
+  .topbar,.steps-nav,.no-print{display:none!important}
+  .view{padding:10px!important}
+  .ucard{break-inside:avoid;box-shadow:none!important;transform:none!important}
+}
+</style>
 </head>
 <body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useMemo}=React;
 
-<!-- Nav -->
-<nav>
-    <div class="nav-content">
-        <a href="../apppp/" class="nav-logo">
-            <img src="../apppp/logo_efix_400x400.jpg" alt="Efix">
-            <span>efixDI+</span>
-        </a>
-        <div class="nav-right">
-            <ul class="nav-links">
-                <li><a href="../apppp/">App</a></li>
-                <li><a href="./" class="active">Protocol</a></li>
-                <li><a href="https://polygonscan.com/address/0x2eA512b4C5e53A8c1302AC8ba2d43c5DA90b307C" target="_blank">Contratos</a></li>
-            </ul>
-            <div class="nav-badge">
-                <span class="nav-dot"></span>
-                <span id="navStatus">Mainnet</span>
-            </div>
-        </div>
-    </div>
-</nav>
+const A=0.60,B=0.40,ADRREF=795,DIAS=30.42,OTA=0.165,TXL=0.12;
 
-<!-- Page Header -->
-<div class="container">
-    <div class="page-header">
-        <h1>Protocol Dashboard</h1>
-        <p>Real-time metrics, APY projections & stress testing</p>
-    </div>
-
-    <!-- KPIs -->
-    <div class="kpi-grid">
-        <div class="kpi">
-            <div class="kpi-label">Protocol TVL</div>
-            <div class="kpi-value" id="kpi-tvl">R$ —</div>
-            <div class="kpi-sub" id="kpi-tvl-usd">Loading...</div>
-        </div>
-        <div class="kpi">
-            <div class="kpi-label">efixDI Supply</div>
-            <div class="kpi-value" id="kpi-supply">—</div>
-            <div class="kpi-sub">Polygon + Base</div>
-        </div>
-        <div class="kpi">
-            <div class="kpi-label">BRL/USD Rate</div>
-            <div class="kpi-value" id="kpi-rate">—</div>
-            <div class="kpi-sub">Chainlink Oracle</div>
-        </div>
-        <div class="kpi">
-            <div class="kpi-label">Backend Uptime</div>
-            <div class="kpi-value" id="kpi-uptime">—</div>
-            <div class="kpi-sub">Railway 24/7</div>
-        </div>
-    </div>
-
-    <!-- Tabs -->
-    <div class="tabs">
-        <button class="tab active" onclick="switchTab('apy',this)">📊 APY Projections</button>
-        <button class="tab" onclick="switchTab('stress',this)">⚡ Stress Tests</button>
-        <button class="tab" onclick="switchTab('terminal',this)">🖥️ Live Queries</button>
-        <button class="tab" onclick="switchTab('arch',this)">🏗️ Architecture</button>
-    </div>
-
-    <!-- APY Panel -->
-    <div class="tab-panel active" id="panel-apy">
-        <div class="card">
-            <div class="card-title">📊 APY by Leverage Scenario</div>
-            <div class="card-meta">
-                CDI/SELIC: <strong>14.90%</strong> · Morpho Borrow: <strong>0.67%</strong> · Performance Fee: <strong>20%</strong> · LLTV: <strong>77%</strong>
-            </div>
-            <table class="tbl">
-                <thead><tr><th></th><th>Scenario</th><th>LTV</th><th>Leverage</th><th>Net APY</th><th>On R$100K/yr</th><th>Health Factor</th><th>Risk</th></tr></thead>
-                <tbody id="apyBody"></tbody>
-            </table>
-        </div>
-        <div class="card">
-            <div class="card-title">Visual Comparison</div>
-            <div id="apyBars"></div>
-        </div>
-    </div>
-
-    <!-- Stress Panel -->
-    <div class="tab-panel" id="panel-stress">
-        <div class="stress-chips" id="stressChips"></div>
-        <div class="card" id="stressTable"></div>
-        <div class="card" id="stressMatrix">
-            <div class="card-title">Health Factor Matrix (LTV × BRL Shock)</div>
-            <table class="matrix" id="matrixTable"></table>
-        </div>
-    </div>
-
-    <!-- Terminal Panel -->
-    <div class="tab-panel" id="panel-terminal">
-        <div class="card">
-            <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
-                <button class="btn-term btn-black" onclick="runCmd('health')">Health Check</button>
-                <button class="btn-term btn-black" onclick="runCmd('status')">Dashboard Status</button>
-                <button class="btn-term btn-black" onclick="runCmd('morpho')">Morpho Position</button>
-                <button class="btn-term btn-black" onclick="runCmd('all')">▶ Run All</button>
-                <button class="btn-term btn-outline" onclick="document.getElementById('termOut').innerHTML=''">Clear</button>
-            </div>
-            <div class="terminal" id="termOut">
-                <div><span class="t-green">$</span> <span class="t-dim">Ready — click a button to query the live protocol.</span></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Architecture Panel -->
-    <div class="tab-panel" id="panel-arch">
-        <div class="grid-2">
-            <div class="card">
-                <div class="card-title">Polygon Mainnet <span class="badge-sm badge-green">Chain 137</span></div>
-                <div id="archPoly"></div>
-            </div>
-            <div class="card">
-                <div class="card-title">Base Mainnet <span class="badge-sm badge-green">Chain 8453</span></div>
-                <div id="archBase"></div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-title">Backend v3.0 — Railway 24/7</div>
-            <div class="svc-grid" id="archSvc"></div>
-        </div>
-    </div>
-</div>
-
-<!-- Footer -->
-<footer>
-    <p>efixDI+ Protocol — <a href="https://github.com/Develop-ltda" target="_blank">GitHub</a> · <a href="https://polygonscan.com/address/0x2eA512b4C5e53A8c1302AC8ba2d43c5DA90b307C" target="_blank">VaultV2</a> · <a href="https://app.morpho.org/base/vault/0xf4A3FaDcEf350B2F168F97Cdbaa2221FF29ACBd5" target="_blank">Morpho Vault</a></p>
-    <p style="margin-top:8px;font-size:.72rem">EFIX Securitizadora — CVM Resolution 88/2022</p>
-</footer>
-
-<script>
-// ═══════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════
-const BE='https://efixdi-backend-production.up.railway.app';
-const AK='efixdi-admin-2026';
-const SELIC=14.90,MBR=0.67,PF=0.20,LLTV=0.77;
-
-// ═══════════════════════════════════════
-// MATH
-// ═══════════════════════════════════════
-function calcAPY(ltv,cdi){cdi=cdi||SELIC;if(!ltv)return cdi*(1-PF);const l=1/(1-ltv);return(cdi*l-MBR*(l-1))*(1-PF)}
-function calcHF(ltv,shock){shock=shock||0;if(!ltv)return Infinity;return(LLTV*(1+shock/100))/ltv}
-function riskInfo(hf){
-  if(hf===Infinity||hf>=1.5)return{t:'SAFE',c:'badge-green'};
-  if(hf>=1.15)return{t:'WARNING',c:'badge-yellow'};
-  if(hf>=1.0)return{t:'AUTO-DELEV',c:'badge-yellow'};
-  return{t:'LIQUIDATION',c:'badge-red'};
-}
-function fmt(n){return n.toLocaleString('pt-BR',{maximumFractionDigits:0})}
-
-// ═══════════════════════════════════════
-// LIVE DATA
-// ═══════════════════════════════════════
-async function fetchLive(){
-  try{
-    const[h,s]=await Promise.all([
-      fetch(BE+'/health').then(r=>r.json()),
-      fetch(BE+'/api/status?key='+AK).then(r=>r.json())
-    ]);
-    const p=s.protocol;
-    document.getElementById('kpi-tvl').textContent='R$ '+parseFloat(p.tvl_brl).toFixed(2);
-    document.getElementById('kpi-tvl-usd').textContent='$'+parseFloat(p.tvl_usd).toFixed(2)+' USD';
-    document.getElementById('kpi-supply').textContent=parseFloat(p.efix_total_supply).toFixed(2);
-    document.getElementById('kpi-rate').textContent=parseFloat(p.brl_usd_rate).toFixed(6);
-    document.getElementById('kpi-uptime').textContent=Math.floor(h.uptime/3600)+'h '+Math.floor((h.uptime%3600)/60)+'m';
-    document.getElementById('navStatus').textContent='Mainnet · Block '+h.block;
-  }catch(e){
-    document.getElementById('kpi-tvl').textContent='R$ 100.09';
-    document.getElementById('kpi-tvl-usd').textContent='$19.18 USD';
-    document.getElementById('kpi-supply').textContent='678.77';
-    document.getElementById('kpi-rate').textContent='0.191626';
-    document.getElementById('kpi-uptime').textContent='—';
-  }
-}
-fetchLive();setInterval(fetchLive,30000);
-
-// ═══════════════════════════════════════
-// TABS
-// ═══════════════════════════════════════
-function switchTab(id,btn){
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
-  btn.classList.add('active');
-}
-
-// ═══════════════════════════════════════
-// APY TABLE
-// ═══════════════════════════════════════
-const scenarios=[
-  {n:'Hold (no leverage)',ltv:0,e:'🏦'},
-  {n:'Conservative',ltv:.30,e:'🟢'},
-  {n:'Moderate',ltv:.50,e:'🟡'},
-  {n:'★ Target Range',ltv:.60,e:'⭐',hl:1},
-  {n:'Aggressive',ltv:.70,e:'🟠'},
-  {n:'Max Leverage',ltv:.75,e:'🔴'},
+const BAIRROS={
+  "Ipanema":{di:1.000,occ:0.651},"Leblon":{di:0.994,occ:0.641},
+  "Leme":{di:0.870,occ:0.635},"Copacabana":{di:0.863,occ:0.640},
+  "Flamengo":{di:0.812,occ:0.552},"Urca":{di:0.800,occ:0.540},
+  "Botafogo":{di:0.793,occ:0.625},"Humaitá":{di:0.793,occ:0.625},
+  "Catete":{di:0.750,occ:0.600},"Glória":{di:0.740,occ:0.590},
+  "Santa Teresa":{di:0.644,occ:0.542},"Cosme Velho":{di:0.610,occ:0.494},
+};
+const VISTAS=[
+  {key:"sem_vista",label:"Sem vista",short:"—",m:1.00},
+  {key:"vista_rua",label:"Vista rua",short:"Rua",m:1.12},
+  {key:"vista_verde",label:"Vista verde",short:"Verde",m:1.18},
+  {key:"vista_mar_parc",label:"Mar parcial",short:"Mar↗",m:1.38},
+  {key:"vista_mar_total",label:"Mar total",short:"Mar✦",m:1.80},
+];
+const TIPOS=[
+  {key:"studio",label:"Studio",m:1.00},
+  {key:"1q",label:"1 Quarto",m:1.15},
+  {key:"2q",label:"2 Quartos",m:1.28},
 ];
 
-const maxAPY=calcAPY(.75);
-let apyHTML='',barHTML='';
-scenarios.forEach((s,i)=>{
-  const apy=calcAPY(s.ltv),hf=calcHF(s.ltv),ri=riskInfo(hf);
-  const annual=100000*apy/100,lev=s.ltv?((1/(1-s.ltv)).toFixed(1)+'x'):'—';
-  const pct=(apy/maxAPY*100).toFixed(1);
-  apyHTML+=`<tr class="${s.hl?'highlight':''}">
-    <td>${s.e}</td><td style="font-weight:${s.hl?700:400}">${s.n}</td>
-    <td class="mono">${(s.ltv*100).toFixed(0)}%</td><td class="mono">${lev}</td>
-    <td class="mono" style="font-weight:700;font-size:1rem">${apy.toFixed(1)}%</td>
-    <td class="mono">R$ ${fmt(annual)}</td>
-    <td class="mono">${hf===Infinity?'∞':hf.toFixed(2)}</td>
-    <td><span class="badge-sm ${ri.c}">${ri.t}</span></td></tr>`;
-
-  barHTML+=`<div class="bar-row">
-    <div class="bar-label">${s.e} ${s.n.replace('★ ','')}</div>
-    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${s.hl?'var(--black)':'var(--gray-700)'}">
-      <span class="bar-fill-text">${apy.toFixed(1)}%</span></div></div>
-    <div class="bar-end">R$${fmt(annual)}</div></div>`;
-});
-document.getElementById('apyBody').innerHTML=apyHTML;
-document.getElementById('apyBars').innerHTML=barHTML;
-
-// ═══════════════════════════════════════
-// STRESS TESTS
-// ═══════════════════════════════════════
-const stressTests=[
-  {n:'Normal',s:0,cdi:14.90,e:'✅'},
-  {n:'BRL −10%',s:-10,cdi:15.50,e:'⚠️'},
-  {n:'BRL −20%',s:-20,cdi:16.50,e:'🔶'},
-  {n:'BRL −30%',s:-30,cdi:18.00,e:'🔴'},
-  {n:'BRL −40% Black Swan',s:-40,cdi:20.00,e:'💀'},
-  {n:'BRL +15% Rally',s:15,cdi:13.50,e:'🚀'},
-];
-
-let activeStress=0;
-const chipsEl=document.getElementById('stressChips');
-stressTests.forEach((st,i)=>{
-  const btn=document.createElement('button');
-  btn.className='stress-chip'+(i===0?' active':'');
-  btn.textContent=st.e+' '+st.n;
-  btn.onclick=()=>{activeStress=i;
-    document.querySelectorAll('.stress-chip').forEach(c=>c.classList.remove('active'));
-    btn.classList.add('active');renderStress()};
-  chipsEl.appendChild(btn);
-});
-
-function renderStress(){
-  const st=stressTests[activeStress];
-  let html=`<div class="card-title">${st.e} ${st.n}</div>
-    <div class="card-meta">BRL/USD: <strong>${st.s>=0?'+':''}${st.s}%</strong> · CDI: <strong>${st.cdi}%</strong></div>
-    <table class="tbl"><thead><tr><th>LTV</th><th>Net APY</th><th>Health Factor</th><th>Annual R$100K</th><th>Status</th><th>Action</th></tr></thead><tbody>`;
-  [0,.30,.50,.60,.70,.75].forEach((ltv,i)=>{
-    const lev=ltv?1/(1-ltv):1;
-    const apy=(st.cdi*lev-MBR*(lev-1))*(1-PF);
-    const hf=calcHF(ltv,st.s),ri=riskInfo(hf);
-    const action=hf===Infinity||hf>=1.5?'None':hf>=1.15?'Monitor':hf>=1.0?'AUTO-DELEVERAGE':'EMERGENCY UNWIND';
-    html+=`<tr><td class="mono">${(ltv*100).toFixed(0)}%</td>
-      <td class="mono" style="font-weight:700">${apy.toFixed(1)}%</td>
-      <td class="mono">${hf===Infinity?'∞':hf.toFixed(2)}</td>
-      <td class="mono">R$ ${fmt(100000*apy/100)}</td>
-      <td><span class="badge-sm ${ri.c}">${ri.t}</span></td>
-      <td style="font-weight:${action!=='None'?700:400};color:${action.includes('EMERGENCY')?'var(--red)':action.includes('AUTO')?'var(--yellow)':'var(--gray-400)'}">${action}</td></tr>`;
-  });
-  html+='</tbody></table>';
-  if(st.s<=-20)html+=`<div class="info-box green"><div class="info-title">🛡️ D+0 Redemption Protection</div>
-    <div class="info-text">Underlying DI fund shares redeem instantly (D+0). BRL capital is 100% preserved regardless of USD exchange rate. Auto-deleverage triggers at HF < 1.15, reducing exposure before liquidation.</div></div>`;
-  document.getElementById('stressTable').innerHTML=html;
-}
-renderStress();
-
-// Matrix
-let mx='<thead><tr><th class="th-left"></th>';
-[-40,-30,-20,-10,0,10,15].forEach(s=>{mx+=`<th style="color:${s<0?'var(--red)':'var(--green)'}">${s>=0?'+':''}${s}%</th>`});
-mx+='</tr></thead><tbody>';
-[.30,.50,.60,.70,.75].forEach(ltv=>{
-  mx+=`<tr><td class="th-left" style="font-weight:700">${(ltv*100)}% LTV</td>`;
-  [-40,-30,-20,-10,0,10,15].forEach(s=>{
-    const hf=calcHF(ltv,s),ri=riskInfo(hf);
-    const bgMap={'badge-green':'var(--green-bg)','badge-yellow':'var(--yellow-bg)','badge-red':'var(--red-bg)'};
-    const cMap={'badge-green':'var(--green)','badge-yellow':'var(--yellow)','badge-red':'var(--red)'};
-    mx+=`<td style="background:${bgMap[ri.c]};color:${cMap[ri.c]}">${hf.toFixed(2)}</td>`;
-  });
-  mx+='</tr>';
-});
-mx+='</tbody>';
-document.getElementById('matrixTable').innerHTML=mx;
-
-// ═══════════════════════════════════════
-// TERMINAL
-// ═══════════════════════════════════════
-const termEl=document.getElementById('termOut');
-function tLine(cls,txt){termEl.innerHTML+=`<div><span class="${cls}">${txt}</span></div>`;termEl.scrollTop=termEl.scrollHeight}
-
-async function runCmd(cmd){
-  if(cmd==='all'){await runCmd('health');await new Promise(r=>setTimeout(r,300));await runCmd('status');await new Promise(r=>setTimeout(r,300));await runCmd('morpho');return}
-  tLine('t-green','$ curl '+BE+'/'+(cmd==='health'?'health':cmd==='status'?'api/status':cmd));
-  try{
-    if(cmd==='health'){
-      const r=await fetch(BE+'/health').then(r=>r.json());
-      tLine('t-green','HTTP 200 — '+r.ts);
-      tLine('t-white','  status: '+r.status+' | block: '+r.block+' | uptime: '+Math.floor(r.uptime/3600)+'h');
-      Object.entries(r.services).forEach(([k,v])=>{
-        const ok=v.match(/connected|authenticated|polling|active|listening|idle/);
-        tLine(ok?'t-green':'t-yellow','  '+k+': '+v);
-      });
-    }else if(cmd==='status'){
-      const r=await fetch(BE+'/api/status?key='+AK).then(r=>r.json());
-      tLine('t-green','HTTP 200');
-      tLine('t-green','  tvl: R$ '+parseFloat(r.protocol.tvl_brl).toFixed(2)+' ($'+parseFloat(r.protocol.tvl_usd).toFixed(2)+')');
-      tLine('t-white','  supply: '+parseFloat(r.protocol.efix_total_supply).toFixed(2)+' efixDI');
-      tLine('t-white','  brl/usd: '+r.protocol.brl_usd_rate);
-      tLine('t-green','  vault: '+(r.protocol.vault_paused===false?'active':'PAUSED')+' | bridge: '+(r.protocol.bridge_paused===false?'active':'PAUSED'));
-      tLine('t-white','  operator: '+parseFloat(r.operator.balances.matic).toFixed(2)+' MATIC');
-      tLine('t-green','  hausbank: '+(r.services.hausbank.authenticated?'authenticated':'disconnected')+' (circuit: '+r.services.hausbank.circuit.state+')');
-      tLine('t-green','  risky_positions: '+r.services.keeper.risky_positions);
-    }else if(cmd==='morpho'){
-      tLine('t-dim','Morpho Blue Position (Base Mainnet)');
-      tLine('t-white','  market: efixDI/USDC | id: 0x31d65c...345a');
-      tLine('t-green','  collateral: 25 efixDI (~$4.79)');
-      tLine('t-white','  borrowed: 2.5 USDC');
-      tLine('t-white','  ltv: 52.2% / 77% LLTV');
-      tLine('t-green','  health_factor: 1.475');
-      tLine('t-white','  borrow_rate: 0.67% APR');
-      tLine('t-green','  net_yield: ~25.4% APY (at target LTV)');
-      tLine('t-dim','  vault_v2: 0xf4A3...CBd5 (listing PR #936 pending)');
-    }
-  }catch(e){tLine('t-red','Network error: '+e.message+'. Try from your terminal.')}
+function calc(u,proj,bd){
+  const decay=Math.max(0.55,Math.exp(-0.0035*proj.distPraia));
+  const floor=1+Math.max(0,u.andar-3)*0.005;
+  const vm=VISTAS.find(v=>v.key===u.vista)?.m??1;
+  const tm=TIPOS.find(t=>t.key===u.tipo)?.m??1;
+  const SM=decay*floor*vm*tm;
+  const adr=ADRREF*Math.pow(bd.di,A)*Math.pow(SM,B);
+  const recB=adr*bd.occ*DIAS;
+  const recL=recB*(1-OTA);
+  const ni=recL-proj.cond-proj.energia-proj.iptu;
+  const res=ni*(1-TXL);
+  const y=u.preco>0?Math.max(0,res*12/u.preco*100):0;
+  return{...u,adr:Math.round(adr),occ:bd.occ,recB,recL,ni,res,y,rpm:(adr*bd.occ)/u.area};
 }
 
-// ═══════════════════════════════════════
-// ARCHITECTURE
-// ═══════════════════════════════════════
-const polyContracts=[
-  ['EfixDIToken','0x0408...6441','ERC20 + mint/burn'],
-  ['EfixVaultV2','0x2eA5...307C','Core vault logic'],
-  ['PIXBridge','0x1d97...78f4','Fiat on/off-ramp'],
-  ['OFT Adapter V2','0x6032...258Fc','LayerZero bridge'],
-  ['Chainlink BRL/USD','0xB90D...AB7c','Price feed'],
-  ['BRTHSwap','0xfBfC...8800','BRTH conversion'],
-];
-const baseContracts=[
-  ['EfixDITokenBase','0xF5cA...5608','Bridged token'],
-  ['MinterBurner','0x400a...B9a3','LZ mint/burn'],
-  ['EfixBRLOracleV2','0xFC6a...Ea86','Price feed (4h)'],
-  ['Morpho Vault V2','0xf4A3...CBd5','USDC lending'],
-  ['Morpho Blue','0xBBBB...FFCb','efixDI/USDC market'],
-];
-const services=[
-  ['✅ Auto-Mint Poller','30s interval via HausBank'],
-  ['✅ Withdrawal Listener','Event-driven PIX cashout'],
-  ['✅ Keeper Bot','Health factor monitoring'],
-  ['✅ Circuit Breaker','Per-service failure isolation'],
-  ['✅ HausBank OAuth2','Auto-refresh (3600s TTL)'],
-  ['✅ Oracle Keeper','V2 update every 4 hours'],
+function yc(y){
+  if(y>=14)return{cls:"bg",bg:"#f0fdf4",bo:"#bbf7d0",tc:"#16a34a",label:"≥ 14%"};
+  if(y>=12)return{cls:"bb",bg:"#eff6ff",bo:"#bfdbfe",tc:"#2563eb",label:"≥ 12%"};
+  if(y>=10)return{cls:"ba",bg:"#fffbeb",bo:"#fde68a",tc:"#d97706",label:"≥ 10%"};
+  if(y>=8) return{cls:"br",bg:"#fef2f2",bo:"#fecaca",tc:"#dc2626",label:"≥ 8%"};
+           return{cls:"br",bg:"#fff1f2",bo:"#fecdd3",tc:"#e11d48",label:"< 8%"};
+}
+
+const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const pct=n=>n.toFixed(1)+'%';
+const today=new Date().toLocaleDateString('pt-BR');
+
+const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,cond:800,energia:380,iptu:280};
+const U0=[
+  {id:1,nome:"Std 01",area:40.39,andar:2,vista:"sem_vista",tipo:"studio",preco:780000},
+  {id:2,nome:"Std 02",area:36.03,andar:2,vista:"sem_vista",tipo:"studio",preco:695000},
+  {id:3,nome:"Std 03",area:35.28,andar:2,vista:"sem_vista",tipo:"studio",preco:680000},
+  {id:4,nome:"Std 04",area:36.03,andar:2,vista:"sem_vista",tipo:"studio",preco:695000},
+  {id:5,nome:"Std 05",area:40.39,andar:2,vista:"sem_vista",tipo:"studio",preco:780000},
+  {id:6,nome:"Cob. A",area:45.76,andar:7,vista:"vista_verde",tipo:"studio",preco:980000},
+  {id:7,nome:"Cob. B",area:46.94,andar:7,vista:"vista_verde",tipo:"studio",preco:980000},
+  {id:8,nome:"Ct. 01",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
+  {id:9,nome:"Ct. 02",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
+  {id:10,nome:"Ct. 03",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
+  {id:11,nome:"Ct. 04",area:45.31,andar:8,vista:"vista_verde",tipo:"studio",preco:1100000},
 ];
 
-function renderContracts(el,list){
-  el.innerHTML=list.map(([n,a,d])=>`<div class="proto-item"><div><div class="proto-name">${n}</div><div class="proto-desc">${d}</div></div><div class="proto-addr">${a}</div></div>`).join('');
+function App(){
+  const[step,setStep]=useState(1);
+  const[proj,setProj]=useState(P0);
+  const[units,setUnits]=useState(U0);
+  const[nid,setNid]=useState(12);
+  const[sb,setSb]=useState("y");
+  const[sd,setSd]=useState(-1);
+
+  const bd=BAIRROS[proj.bairro]||BAIRROS["Ipanema"];
+  const results=useMemo(()=>units.map(u=>calc(u,proj,bd)),[units,proj,bd]);
+  const sorted=useMemo(()=>[...results].sort((a,b)=>(b[sb]-a[sb])*sd),[results,sb,sd]);
+  const byFloor=useMemo(()=>{
+    const m={};results.forEach(r=>{if(!m[r.andar])m[r.andar]=[];m[r.andar].push(r);});
+    return Object.entries(m).sort((a,b)=>+b[0]-+a[0]);
+  },[results]);
+
+  const vgv=units.reduce((s,u)=>s+u.preco,0);
+  const avgY=results.length?results.reduce((s,r)=>s+r.y,0)/results.length:0;
+  const avgA=results.length?results.reduce((s,r)=>s+r.adr,0)/results.length:0;
+  const best=results.length?[...results].sort((a,b)=>b.y-a.y)[0]:null;
+
+  const upP=(f,v)=>setProj(p=>({...p,[f]:['nome','endereco','bairro'].includes(f)?v:+v}));
+  const add=()=>{setUnits(u=>[...u,{id:nid,nome:`UH ${nid}`,area:35,andar:2,vista:"sem_vista",tipo:"studio",preco:700000}]);setNid(n=>n+1);};
+  const del=id=>setUnits(u=>u.filter(x=>x.id!==id));
+  const upU=(id,f,v)=>setUnits(u=>u.map(x=>x.id===id?{...x,[f]:['nome','vista','tipo'].includes(f)?v:+v}:x));
+  const ts=f=>{if(sb===f)setSd(d=>-d);else{setSb(f);setSd(-1);}};
+
+  return(
+    <div className="shell">
+
+      {/* TOPBAR */}
+      <div className="topbar">
+        <div className="logo">LOBIE <span>Estudo de Rentabilidade</span></div>
+        <div style={{display:"flex",gap:6}} className="no-print">
+          {step===3&&<button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button>}
+        </div>
+      </div>
+
+      {/* STEPS NAV */}
+      <div className="steps-nav no-print">
+        {[["1","Projeto",1],["2","Unidades",2],["3","Resultados",3]].map(([n,l,s])=>(
+          <div key={s} className={`step-tab${step===s?" active":step>s?" done":""}`}
+            onClick={()=>step>s&&setStep(s)}>
+            <div className="snum">{step>s?"✓":n}</div>{l}
+          </div>
+        ))}
+        {step===3&&(
+          <div className="nav-info">
+            <span>{proj.nome}</span>
+            <span style={{color:"var(--border)"}}>·</span>
+            <span>{units.length} UHs</span>
+            <span style={{color:"var(--border)"}}>·</span>
+            <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</span>
+          </div>
+        )}
+      </div>
+
+      {/* ─── STEP 1 ─── */}
+      {step===1&&(
+        <div className="view step-fade">
+          <div style={{maxWidth:860,margin:"0 auto"}}>
+            <h1 style={{fontSize:28,fontWeight:800,letterSpacing:"-.5px",marginBottom:6}}>Novo Estudo</h1>
+            <p style={{fontSize:13,color:"var(--text2)",marginBottom:28}}>Configure o empreendimento. O bairro determina o DemandIndex automaticamente via AirDNA.</p>
+
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+              <div className="card">
+                <div className="ctitle">Identificação</div>
+                <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                  <FG l="Nome do empreendimento"><input value={proj.nome} onChange={e=>upP('nome',e.target.value)}/></FG>
+                  <FG l="Endereço"><input value={proj.endereco} onChange={e=>upP('endereco',e.target.value)}/></FG>
+                  <FG l="Bairro — define DemandIndex automaticamente">
+                    <select value={proj.bairro} onChange={e=>upP('bairro',e.target.value)}>
+                      {Object.keys(BAIRROS).map(b=><option key={b}>{b}</option>)}
+                    </select>
+                  </FG>
+                  <FG l="Distância da praia (metros)"><input type="number" value={proj.distPraia} onChange={e=>upP('distPraia',e.target.value)}/></FG>
+                </div>
+              </div>
+
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                <div className="card">
+                  <div className="ctitle">Despesas mensais padrão (aplicadas a todas as UHs)</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+                    <FG l="Condomínio"><input type="number" value={proj.cond} onChange={e=>upP('cond',e.target.value)}/></FG>
+                    <FG l="Energia"><input type="number" value={proj.energia} onChange={e=>upP('energia',e.target.value)}/></FG>
+                    <FG l="IPTU/mês"><input type="number" value={proj.iptu} onChange={e=>upP('iptu',e.target.value)}/></FG>
+                  </div>
+                </div>
+
+                <div style={{background:"var(--green-bg)",border:"1px solid var(--green-b)",borderRadius:16,padding:"16px 20px"}}>
+                  <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"var(--green)",marginBottom:14}}>Parâmetros de Mercado · AirDNA LTM</div>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+                    {[["Bairro",proj.bairro,false,null],["DemandIndex",bd.di.toFixed(3),true,"var(--accent)"],["Ocupação LTM",pct(bd.occ*100),true,"var(--green)"],["ADR ref.","R$795",true,"var(--accent)"]].map(([l,v,mono,c])=>(
+                      <div key={l} style={{background:"rgba(255,255,255,.7)",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
+                        <div style={{fontFamily:mono?"'Space Mono',monospace":"'Syne',sans-serif",fontSize:mono?14:12,fontWeight:700,color:c||"var(--text)",lineHeight:1}}>{v}</div>
+                        <div style={{fontSize:9,color:"var(--text2)",marginTop:5,fontWeight:800,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--green-b)",fontSize:10,color:"#6b9f7a",fontWeight:600,lineHeight:1.7}}>
+                    ADR = R$795 × DI<sup>0.60</sup> × SM<sup>0.40</sup> · Fonte: {today}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{marginTop:24,display:"flex",justifyContent:"flex-end"}}>
+              <button className="btn btn-p btn-lg" onClick={()=>setStep(2)}>Configurar Unidades →</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── STEP 2 ─── */}
+      {step===2&&(
+        <div className="view step-fade">
+          <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",marginBottom:20,flexWrap:"wrap",gap:12}}>
+            <div>
+              <h1 style={{fontSize:24,fontWeight:800,letterSpacing:"-.3px"}}>
+                {proj.nome} &nbsp;<span className="badge bb">{units.length} UHs</span>
+              </h1>
+              <p style={{fontSize:12,color:"var(--text2)",marginTop:4}}>{proj.endereco} · {proj.bairro} · DI {bd.di.toFixed(3)} · VGV <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</span></p>
+            </div>
+            <button className="btn" onClick={add}>+ Adicionar UH</button>
+          </div>
+
+          <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden"}}>
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse"}} className="itbl">
+                <thead><tr>{["Nome","Área m²","Andar","Vista","Tipologia","Preço R$",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {units.map(u=>(
+                    <tr key={u.id}>
+                      <td><input value={u.nome} onChange={e=>upU(u.id,'nome',e.target.value)} style={{width:76}}/></td>
+                      <td><input type="number" step=".01" value={u.area} onChange={e=>upU(u.id,'area',e.target.value)} style={{width:72}}/></td>
+                      <td><input type="number" min="1" max="60" value={u.andar} onChange={e=>upU(u.id,'andar',e.target.value)} style={{width:56}}/></td>
+                      <td><select value={u.vista} onChange={e=>upU(u.id,'vista',e.target.value)} style={{width:130}}>{VISTAS.map(v=><option key={v.key} value={v.key}>{v.label}</option>)}</select></td>
+                      <td><select value={u.tipo} onChange={e=>upU(u.id,'tipo',e.target.value)} style={{width:106}}>{TIPOS.map(t=><option key={t.key} value={t.key}>{t.label}</option>)}</select></td>
+                      <td><input type="number" value={u.preco} onChange={e=>upU(u.id,'preco',e.target.value)} style={{width:110}}/></td>
+                      <td style={{textAlign:"center"}}>
+                        <button onClick={()=>del(u.id)} style={{background:"none",border:"none",color:"var(--red)",cursor:"pointer",fontSize:18,opacity:.5,transition:"opacity .15s",padding:"0 6px"}}
+                          onMouseOver={e=>e.target.style.opacity=1} onMouseOut={e=>e.target.style.opacity=.5}>×</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div style={{padding:"10px 16px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+              <span style={{fontSize:12,color:"var(--text2)"}}><b style={{color:"var(--text)"}}>{units.length} unidades</b> &nbsp;·&nbsp; VGV <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b></span>
+              <button className="btn" onClick={add} style={{fontSize:11}}>+ UH</button>
+            </div>
+          </div>
+
+          <div style={{marginTop:20,display:"flex",justifyContent:"space-between"}}>
+            <button className="btn" onClick={()=>setStep(1)}>← Voltar</button>
+            <button className="btn btn-p btn-lg" onClick={()=>setStep(3)}>Ver Resultados →</button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── STEP 3 ─── */}
+      {step===3&&(
+        <div className="view step-fade">
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:16,flexWrap:"wrap",gap:12}}>
+            <div>
+              <h1 style={{fontSize:24,fontWeight:800,letterSpacing:"-.3px",lineHeight:1.1}}>{proj.nome}</h1>
+              <p style={{fontSize:12,color:"var(--text2)",marginTop:4}}>{proj.endereco} &nbsp;·&nbsp; {proj.bairro} &nbsp;·&nbsp; DI {bd.di.toFixed(3)} &nbsp;·&nbsp; {units.length} UHs &nbsp;·&nbsp; {today}</p>
+            </div>
+            <div style={{display:"flex",gap:6}} className="no-print">
+              <button className="btn" onClick={()=>setStep(2)}>← Editar</button>
+              <button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button>
+            </div>
+          </div>
+
+          {/* KPIs */}
+          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+            <div className="mkpi">
+              <div className="mkpi-l">Total de UHs</div>
+              <div className="mkpi-v">{units.length}</div>
+              <div className="mkpi-t">VGV {brl(vgv)}</div>
+            </div>
+            <div className="mkpi">
+              <div className="mkpi-l">ADR médio</div>
+              <div className="mkpi-v">{brl(Math.round(avgA))}</div>
+              <div className="mkpi-t">{pct(bd.occ*100)} occ · {proj.bairro}</div>
+            </div>
+            <div className="mkpi" style={{borderTop:"2px solid var(--green)"}}>
+              <div className="mkpi-l">Yield médio portfólio</div>
+              <div className="mkpi-v" style={{color:"var(--green)"}}>{pct(avgY)}</div>
+              <div className="mkpi-t">modelo natural a.a.</div>
+              <div className="mkpi-bar"><div className="mkpi-bar-f" style={{width:Math.min(100,(avgY/15)*100)+"%",background:"var(--green)"}}/></div>
+            </div>
+            <div className="mkpi" style={{borderTop:"2px solid var(--accent)"}}>
+              <div className="mkpi-l">Melhor UH</div>
+              <div className="mkpi-v" style={{fontSize:16}}>{best?.nome??'—'}</div>
+              <div className="mkpi-t">{best?pct(best.y)+" a.a. · "+best.area+"m²":""}</div>
+            </div>
+          </div>
+
+          {/* Legenda */}
+          <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap",alignItems:"center"}}>
+            <span style={{fontSize:10,fontWeight:800,color:"var(--text3)",letterSpacing:1,textTransform:"uppercase",marginRight:4}}>Yield:</span>
+            {[14,12,10,8,0].map(y=>{const c=yc(y+.1);return(
+              <span key={y} className={`badge ${c.cls}`} style={{fontSize:10}}>{c.label}</span>
+            );})}
+          </div>
+
+          {/* HEATMAP */}
+          <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:16,padding:18,marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16,flexWrap:"wrap",gap:8}}>
+              <div style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Mapa de Rentabilidade por Pavimento</div>
+              <div style={{fontSize:11,color:"var(--text3)",fontWeight:700}}>{units.length} unidades · modelo natural Cobb-Douglas</div>
+            </div>
+
+            {byFloor.map(([floor,fus])=>(
+              <div key={floor} style={{marginBottom:14}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                  <span style={{background:"var(--bg3)",borderRadius:8,padding:"2px 10px",fontSize:10,fontWeight:800,fontFamily:"'Space Mono',monospace",whiteSpace:"nowrap"}}>{floor}º andar</span>
+                  <span style={{fontSize:10,color:"var(--text3)",fontWeight:700,whiteSpace:"nowrap"}}>{fus.length} UH{fus.length>1?"s":""}</span>
+                  <div style={{flex:1,height:1,background:"var(--border)"}}/>
+                </div>
+                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                  {fus.map(r=>{
+                    const c=yc(r.y);
+                    return(
+                      <div key={r.id} className="ucard" style={{background:c.bg,border:`1px solid ${c.bo}`,minWidth:152,maxWidth:184}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                          <span style={{fontSize:13,fontWeight:800}}>{r.nome}</span>
+                          <span className={`badge ${c.cls}`} style={{fontSize:9}}>{c.label}</span>
+                        </div>
+                        <div style={{fontSize:11,color:"var(--text2)",marginBottom:8,fontWeight:700}}>
+                          {r.area}m² &nbsp;·&nbsp; {VISTAS.find(v=>v.key===r.vista)?.short}
+                        </div>
+                        <div style={{fontFamily:"'Space Mono',monospace",fontSize:28,fontWeight:700,color:c.tc,lineHeight:1,marginBottom:8}}>
+                          {pct(r.y)}
+                        </div>
+                        <div style={{fontSize:11,lineHeight:1.9,fontWeight:600}}>
+                          <span style={{color:"var(--text2)"}}>ADR </span><span style={{fontFamily:"'Space Mono',monospace"}}>{brl(r.adr)}</span><br/>
+                          <span style={{fontFamily:"'Space Mono',monospace"}}>{brl(Math.round(r.res))}</span><span style={{color:"var(--text3)",fontWeight:400}}>/mês</span><br/>
+                          <span style={{fontSize:10,color:"var(--text3)",fontFamily:"'Space Mono',monospace"}}>{brl(r.preco)}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* RANKING */}
+          <div style={{background:"var(--card)",border:"1px solid var(--border)",borderRadius:16,overflow:"hidden"}}>
+            <div style={{padding:"12px 18px",borderBottom:"1px solid var(--border)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:10,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Ranking de Rentabilidade</span>
+              <span style={{fontSize:10,color:"var(--text3)",fontWeight:700}}>Clique no cabeçalho para ordenar</span>
+            </div>
+            <div style={{overflowX:"auto"}}>
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>UH</th>
+                    {[["Área","area"],["Andar","andar"],["ADR","adr"],["Resultado/mês","res"],["RevPAR/m²","rpm"],["Yield a.a.","y"]].map(([h,f])=>(
+                      <th key={f} className={`sortable${sb===f?" sorted":""}`} onClick={()=>ts(f)}>
+                        {h} <span style={{opacity:.5}}>{sb===f?(sd===-1?"↓":"↑"):"·"}</span>
+                      </th>
+                    ))}
+                    <th>Vista</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map((r,i)=>{
+                    const c=yc(r.y);
+                    return(
+                      <tr key={r.id}>
+                        <td style={{color:"var(--text3)",fontSize:11,fontFamily:"'Space Mono',monospace"}}>#{i+1}</td>
+                        <td style={{fontWeight:800}}>{r.nome}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",color:"var(--text2)"}}>{r.area}m²</td>
+                        <td style={{color:"var(--text2)",textAlign:"center"}}>{r.andar}º</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:700}}>{brl(r.adr)}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",fontWeight:700}}>{brl(Math.round(r.res))}</td>
+                        <td style={{fontFamily:"'Space Mono',monospace",color:"var(--text2)"}}>R${Math.round(r.rpm)}</td>
+                        <td><span className={`badge ${c.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:12}}>{pct(r.y)}</span></td>
+                        <td style={{color:"var(--text2)",fontSize:12}}>{VISTAS.find(v=>v.key===r.vista)?.label}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div style={{padding:"10px 18px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+              <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>Modelo Cobb-Douglas α=0.60 / β=0.40 · AirDNA LTM Mar/2026 · Sazonalidade BD Repasse Lobie 2025</span>
+              <span style={{fontSize:10,color:"var(--text3)",fontWeight:700}}>Confidencial · {today}</span>
+            </div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  );
 }
-renderContracts(document.getElementById('archPoly'),polyContracts);
-renderContracts(document.getElementById('archBase'),baseContracts);
-document.getElementById('archSvc').innerHTML=services.map(([n,d])=>`<div class="svc-item"><div class="svc-name">${n}</div><div class="svc-desc">${d}</div></div>`).join('');
+
+function FG({l,children}){
+  return(
+    <div>
+      <div style={{fontSize:10,color:"var(--text2)",marginBottom:5,fontWeight:800,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
+      {children}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
 </html>
