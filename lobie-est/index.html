@@ -200,6 +200,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
+const BUILD_VERSION='v3.0 · Lobie hedônico';
 
 /* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
    Simulação estocástica por UH: ADR~N(μ,7%σ), OCC~σ=5pp, OTA~N(16.5%,1.5%)
@@ -414,7 +415,7 @@ function App(){
     <div>
       {/* TOPBAR */}
       <div className="topbar">
-        <div className="logo">LOBIE <span>Estudo de Rentabilidade</span></div>
+        <div className="logo">LOBIE <span>Estudo de Rentabilidade</span><span style={{fontSize:9,color:"var(--text3)",marginLeft:8,fontFamily:"'Space Mono',monospace",letterSpacing:0}}>· {BUILD_VERSION}</span></div>
         <div style={{display:"flex",gap:6}} className="no-print">
           {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button></>}
         </div>
