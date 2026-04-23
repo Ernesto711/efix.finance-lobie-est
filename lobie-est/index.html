@@ -73,7 +73,22 @@ input[type=number]::-webkit-inner-spin-button{opacity:.3}
 .view{padding:18px 28px}
 .fade{animation:fu .2s ease both}
 @keyframes fu{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
-@media print{.topbar,.snav,.no-print{display:none!important}.view{padding:6px!important}.ucard{break-inside:avoid}}
+@media print{
+  @page{size:A4;margin:10mm 8mm}
+  .topbar,.snav,.no-print{display:none!important}
+  .view{padding:0!important}
+  .ucard,.uh-panel,.mkpi,.dist-row,.hm-cell{break-inside:avoid}
+  .hm-wrap{grid-template-columns:1fr 300px!important;page-break-inside:avoid;break-inside:avoid}
+  .uh-panel{position:static!important;break-inside:avoid}
+  body{font-size:10px}
+  h1{font-size:16px!important}
+  .mkpi-v{font-size:15px!important}
+  /* Force-show methodology on print */
+  body{background:white!important;color:black!important}
+  /* Page breaks between major sections */
+  .pg-break{page-break-before:always;break-before:page}
+  .hm-cell{min-height:12px}
+}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:var(--bg3)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -401,7 +416,7 @@ function App(){
       <div className="topbar">
         <div className="logo">LOBIE <span>Estudo de Rentabilidade</span></div>
         <div style={{display:"flex",gap:6}} className="no-print">
-          {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button></>}
+          {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button></>}
         </div>
       </div>
 
@@ -584,7 +599,7 @@ function App(){
             <div style={{display:"flex",gap:6}} className="no-print">
               <button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button>
               <button className="btn" onClick={()=>setStep(2)}>← Editar</button>
-              <button className="btn btn-p" onClick={()=>window.print()}>Exportar PDF</button>
+              <button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button>
             </div>
           </div>
 
@@ -653,6 +668,49 @@ function App(){
                     <div style={{color:"var(--text2)",fontSize:9,lineHeight:1.4}}>{d}</div>
                   </div>
                 ))}
+              </div>
+
+              {/* ──── MONTE CARLO + LOBIE HEDÔNICO ──── */}
+              <div style={{marginTop:14,paddingTop:14,borderTop:"1px solid #dde4ff"}}>
+                <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#4a5aaa",marginBottom:10}}>
+                  Camada estocástica &amp; cenário gerido
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,fontSize:11}}>
+                  <div style={{background:"#fff",borderRadius:9,padding:"11px 13px",border:"1px solid #dde4ff"}}>
+                    <div style={{fontWeight:700,marginBottom:7,fontSize:10,textTransform:"uppercase",letterSpacing:.5,color:"var(--acc)"}}>
+                      Monte Carlo — {NMC.toLocaleString('pt-BR')} cenários por UH
+                    </div>
+                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:2,color:"var(--text)",marginBottom:8}}>
+                      ADR<sub>sim</sub> ~ N(μ<sub>ADR</sub>, 7% · μ<sub>ADR</sub>)<br/>
+                      OCC<sub>sim</sub> ~ N(μ<sub>OCC</sub>, 5pp) clip [20%, 95%]<br/>
+                      OTA<sub>sim</sub> ~ N(16.5%, 1.5pp) clip [12%, 22%]
+                    </div>
+                    <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.75}}>
+                      Cada UH passa por {NMC.toLocaleString('pt-BR')} simulações da DRE com as 3 variáveis perturbadas independentemente.
+                      Os resultados são ordenados e extraídos os percentis:
+                      <br/><b style={{color:"var(--red)"}}>P10</b> (pior decil · cenário conservador) · <b style={{color:"var(--acc)"}}>P50</b> (mediana) · <b style={{color:"var(--green)"}}>P90</b> (melhor decil · otimista).
+                      <br/><b>Prob. DY &gt; 12%</b> = fração dos {NMC.toLocaleString('pt-BR')} cenários em que a UH supera a meta de 12% a.a., interpretada como grau de confiança operacional.
+                    </div>
+                  </div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"11px 13px",border:"1px solid #dde4ff"}}>
+                    <div style={{fontWeight:700,marginBottom:7,fontSize:10,textTransform:"uppercase",letterSpacing:.5,color:"var(--acc)"}}>
+                      Cenário Lobie — ADR hedônico por UH
+                    </div>
+                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:10,lineHeight:2,color:"var(--text)",marginBottom:8}}>
+                      H(UH) = SM<sup>0.40</sup> × área<sup>0.30</sup><br/>
+                      H̄ = média de H no portfólio<br/>
+                      ADR<sub>Lobie</sub>(UH) = ADR<sub>input</sub> × H(UH) / H̄
+                    </div>
+                    <div style={{fontSize:10,color:"var(--text2)",lineHeight:1.75}}>
+                      O ADR Lobie input representa a <b>média esperada do portfólio</b>; cada UH desvia proporcional ao seu índice hedônico (área, SM). Unidades maiores, com vista melhor ou em andar alto recebem ADR superior — de forma consistente com o pricing real da operação.
+                      <br/>Ocupação Lobie é uniforme (gestão de receita arbitra taxa única). OTA e despesas seguem a DRE natural.
+                      <br/><b>Multiplicador DI</b>: DI<sub>efetivo</sub> = DI<sub>bairro</sub> × m<sub>DI</sub> — permite arbitrar a demanda do bairro com base em insights operacionais não capturados pelo AirDNA (1.0 = AirDNA puro).
+                    </div>
+                  </div>
+                </div>
+                <div style={{marginTop:10,padding:"9px 12px",background:"#fff",borderRadius:7,border:"1px solid #dde4ff",fontSize:10,color:"var(--text2)",lineHeight:1.7}}>
+                  <b>Como ler o heatmap:</b> cada célula é uma UH; cor = métrica ativa (DY/Resultado/ADR) dentro do cenário selecionado. <b>Natural</b> usa ADR AirDNA com prêmios hedônicos; <b>Lobie</b> ancora no ADR médio arbitrado pela gestão e distribui por índice hedônico. O <b>Delta</b> na comparação mensura o valor operacional da gestão Lobie (positivo = gestão entrega mais que o mercado spot; negativo = mercado natural já satura o ganho).
+                </div>
               </div>
             </div>
           )}
