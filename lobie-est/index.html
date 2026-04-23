@@ -122,7 +122,7 @@ const BAIRROS={
   "Humaitá":      {di:0.793,occ:0.625},
   "Catete":       {di:0.750,occ:0.600},
   "Glória":       {di:0.740,occ:0.590},
-  "Centro":       {di:0.720,occ:0.580},
+  "Centro":       {di:0.226,occ:0.580},
   "Santa Teresa": {di:0.644,occ:0.542},
   "Cosme Velho":  {di:0.610,occ:0.494},
 };
@@ -150,7 +150,8 @@ function sm(u,dist){
 function calc(u,proj,bd){
   const preco=u.area*(proj.precoM2||0);
   const{SM,decay,floor,vm,tm}=sm(u,proj.distPraia);
-  const adr=ADRREF*Math.pow(bd.di,A)*Math.pow(SM,B);
+  const diEff=bd.di*(proj.diMult||1);
+  const adr=ADRREF*Math.pow(diEff,A)*Math.pow(SM,B);
   const recB=adr*bd.occ*DIAS,recL=recB*(1-OTA);
   const ni=recL-proj.cond-proj.energia-proj.iptu;
   const res=ni*(1-TXL);
@@ -164,7 +165,7 @@ function calcL(r,proj){
   const niL=recLL-proj.cond-proj.energia-proj.iptu;
   const resL=niL*(1-TXL);
   const yL=r.preco>0?Math.max(0,resL*12/r.preco*100):0;
-  return{resL,yL};
+  return{resL,yL,recBL,recLL,niL};
 }
 
 function yc(y){
@@ -259,7 +260,7 @@ const hmColor=t=>{
   return`rgb(${Math.round(a[0]+(b[0]-a[0])*f)},${Math.round(a[1]+(b[1]-a[1])*f)},${Math.round(a[2]+(b[2]-a[2])*f)})`;
 };
 
-const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,precoM2:22000,cond:800,energia:380,iptu:280,adrLobie:750,occLobie:85};
+const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,precoM2:22000,cond:800,energia:380,iptu:280,adrLobie:750,occLobie:85,diMult:1.0};
 const U0=[
   {id:1,nome:"Std 01",area:40.39,andar:2,vista:"sem_vista",tipo:"studio"},
   {id:2,nome:"Std 02",area:36.03,andar:2,vista:"sem_vista",tipo:"studio"},
@@ -294,11 +295,30 @@ function App(){
   const mcData=useMemo(()=>{const m={};results.forEach(r=>{m[r.id]=mc(r,proj,bd,proj.adrLobie,proj.occLobie);});return m;},[results,proj,bd]);
   const[selId,setSelId]=useState(null);
   const[hmM,setHmM]=useState("y");
-  const selU=useMemo(()=>{const f=selId!=null?results.find(r=>r.id===selId):null;return f||(results.length?[...results].sort((a,b)=>b.y-a.y)[0]:null);},[selId,results]);
+  const[scn,setScn]=useState("nat");
+  const hasLobie=proj.adrLobie>0&&proj.occLobie>0;
+  const resultsScn=useMemo(()=>{
+    if(scn!=='lb'||!hasLobie)return results;
+    const adrL=proj.adrLobie,occL=proj.occLobie/100;
+    return results.map(r=>{
+      const recB=adrL*occL*DIAS;
+      const recL=recB*(1-OTA);
+      const ni=recL-proj.cond-proj.energia-proj.iptu;
+      const res=ni*(1-TXL);
+      const y=r.preco>0?Math.max(0,res*12/r.preco*100):0;
+      return{...r,adr:adrL,occ:occL,recB,recL,ni,res,y};
+    });
+  },[results,scn,proj,hasLobie]);
+  const byFloorScn=useMemo(()=>{
+    const m={};resultsScn.forEach(r=>{if(!m[r.andar])m[r.andar]=[];m[r.andar].push(r);});
+    return Object.entries(m).sort((a,b)=>+b[0]-+a[0]);
+  },[resultsScn]);
+  const selU=useMemo(()=>{const f=selId!=null?resultsScn.find(r=>r.id===selId):null;return f||(resultsScn.length?[...resultsScn].sort((a,b)=>b.y-a.y)[0]:null);},[selId,resultsScn]);
   const hmVal=r=>hmM==='y'?r.y:hmM==='res'?r.res:r.adr;
-  const hmStats=useMemo(()=>{if(!results.length)return{min:0,max:1};const vs=results.map(r=>hmM==='y'?r.y:hmM==='res'?r.res:r.adr);return{min:Math.min(...vs),max:Math.max(...vs)};},[results,hmM]);
-  const avgProb12=useMemo(()=>{if(!results.length)return 0;return results.reduce((s,r)=>s+(mcData[r.id]?.nat?.prob12||0),0)/results.length;},[results,mcData]);
-  const maxU=useMemo(()=>Math.max(1,...byFloor.map(([,fs])=>fs.length)),[byFloor]);
+  const hmStats=useMemo(()=>{if(!resultsScn.length)return{min:0,max:1};const vs=resultsScn.map(r=>hmM==='y'?r.y:hmM==='res'?r.res:r.adr);return{min:Math.min(...vs),max:Math.max(...vs)};},[resultsScn,hmM]);
+  const mcKey=scn==='lb'?'lb':'nat';
+  const avgProb12=useMemo(()=>{if(!resultsScn.length)return 0;return resultsScn.reduce((s,r)=>s+(mcData[r.id]?.[mcKey]?.prob12||0),0)/resultsScn.length;},[resultsScn,mcData,mcKey]);
+  const maxU=useMemo(()=>Math.max(1,...byFloorScn.map(([,fs])=>fs.length)),[byFloorScn]);
 
   /* ═══ IMPORT STATE ══════════════════════════════════════ */
   const[showImp,setShowImp]=useState(false);
@@ -352,7 +372,7 @@ function App(){
   const avgYL=hasL?results.reduce((s,r)=>s+calcL(r,proj).yL,0)/results.length:0;
   const delta=avgYL-avgY;
 
-  const adrPrev=useMemo(()=>Math.round(ADRREF*Math.pow(bd.di,A)*Math.pow(Math.max(0.55,Math.exp(-0.0035*proj.distPraia)),B)),[bd,proj.distPraia]);
+  const adrPrev=useMemo(()=>Math.round(ADRREF*Math.pow(bd.di*(proj.diMult||1),A)*Math.pow(Math.max(0.55,Math.exp(-0.0035*proj.distPraia)),B)),[bd,proj.distPraia,proj.diMult]);
 
   const upP=(f,v)=>setProj(p=>({...p,[f]:['nome','endereco','bairro'].includes(f)?v:+v}));
   const add=()=>{setUnits(u=>[...u,{id:nid,nome:`UH ${nid}`,area:35,andar:2,vista:"sem_vista",tipo:"studio"}]);setNid(n=>n+1);};
@@ -407,6 +427,19 @@ function App(){
                   <F l="Distância da praia (m) — define decaimento espacial intra-bairro">
                     <input type="number" value={proj.distPraia} onChange={e=>upP('distPraia',e.target.value)}/>
                   </F>
+                  <F l="Multiplicador DI — arbitragem operacional (1.0 = AirDNA puro)">
+                    <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                      <input type="number" step=".01" min="0.05" max="3" value={proj.diMult} onChange={e=>upP('diMult',e.target.value)} style={{flex:1}}/>
+                      <div style={{display:"flex",gap:3}}>
+                        {[0.5,1.0,1.5].map(v=>(
+                          <button key={v} type="button" onClick={()=>upP('diMult',v)}
+                            style={{fontSize:10,padding:"4px 8px",border:"1px solid var(--border)",borderRadius:6,background:Math.abs((proj.diMult||1)-v)<0.01?"var(--acc)":"var(--bg2)",color:Math.abs((proj.diMult||1)-v)<0.01?"#fff":"var(--text2)",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700}}>
+                            ×{v.toFixed(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </F>
                 </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -421,15 +454,21 @@ function App(){
                 <div style={{background:"var(--gbg)",border:"1px solid var(--gb)",borderRadius:14,padding:"13px 16px"}}>
                   <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--green)",marginBottom:11}}>Parâmetros de mercado · AirDNA LTM</div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7}}>
-                    {[["Bairro",proj.bairro,false,null],["DemandIndex",bd.di.toFixed(3),true,"var(--acc)"],["Ocupação LTM",pct(bd.occ*100),true,"var(--green)"],["ADR estimado",brl(adrPrev),true,"var(--acc)"]].map(([l,v,mono,c])=>(
+                    {(()=>{const diEff=bd.di*(proj.diMult||1);const diAdj=Math.abs((proj.diMult||1)-1)>0.001;return [
+                      ["Bairro",proj.bairro,false,null],
+                      ["DI efetivo",diEff.toFixed(3),true,diAdj?"var(--amber)":"var(--acc)"],
+                      ["Ocupação LTM",pct(bd.occ*100),true,"var(--green)"],
+                      ["ADR estimado",brl(adrPrev),true,"var(--acc)"]
+                    ].map(([l,v,mono,c])=>(
                       <div key={l} style={{background:"rgba(255,255,255,.8)",borderRadius:9,padding:"8px",textAlign:"center"}}>
                         <div style={{fontFamily:mono?"'Space Mono',monospace":"inherit",fontSize:mono?12:11,fontWeight:600,color:c||"var(--text)",lineHeight:1}}>{v}</div>
                         <div style={{fontSize:8,color:"var(--text3)",marginTop:4,fontWeight:700,letterSpacing:.3,textTransform:"uppercase"}}>{l}</div>
                       </div>
-                    ))}
+                    ));})()}
                   </div>
                   <div style={{marginTop:9,paddingTop:9,borderTop:"1px solid var(--gb)",fontSize:9,color:"#6b9f7a",lineHeight:1.7}}>
-                    ADR = R$795 × DI<sup>0.60</sup> × SM<sup>0.40</sup> · SM = decay({proj.distPraia}m) × andar × vista × tipo · Fonte: {today}
+                    ADR = R$795 × (DI<sub>bairro</sub> {Math.abs((proj.diMult||1)-1)>0.001?<>× <b style={{color:"var(--amber)"}}>{(proj.diMult||1).toFixed(2)}</b></>:""})<sup>0.60</sup> × SM<sup>0.40</sup> · SM = decay({proj.distPraia}m) × andar × vista × tipo · Fonte: {today}
+                    {Math.abs((proj.diMult||1)-1)>0.001&&<span style={{color:"var(--amber)",fontWeight:700,marginLeft:8}}>· DI arbitrado</span>}
                   </div>
                 </div>
               </div>
@@ -650,12 +689,30 @@ function App(){
             </>}
           </div>
 
+          {/* CENÁRIO TOGGLE */}
+          {hasLobie&&(
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:13,padding:"10px 15px",background:scn==='lb'?"var(--accent-soft, #f0fdf4)":"var(--bg2)",border:`1px solid ${scn==='lb'?"var(--gb)":"var(--border)"}`,borderRadius:13,flexWrap:"wrap"}}>
+              <span style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Cenário de análise</span>
+              <div className="hm-tog no-print" style={{border:"1px solid var(--border)",background:"#fff"}}>
+                <button className={scn==='nat'?"a":""} onClick={()=>setScn('nat')} style={{fontSize:11,padding:"6px 16px"}}>Modelo Natural · AirDNA</button>
+                <button className={scn==='lb'?"a":""} onClick={()=>setScn('lb')} style={{fontSize:11,padding:"6px 16px"}}>Cenário Lobie · Gestão</button>
+              </div>
+              <span style={{fontSize:10,color:"var(--text3)",fontFamily:"'Space Mono',monospace",fontWeight:600,marginLeft:"auto"}}>
+                {scn==='lb'?<>ADR <b style={{color:"var(--text)"}}>{brl(proj.adrLobie)}</b> · OCC <b style={{color:"var(--text)"}}>{pct(proj.occLobie)}</b></>:
+                <>ADR <b style={{color:"var(--text)"}}>{brl(Math.round(avgA))}</b> · OCC <b style={{color:"var(--text)"}}>{pct(bd.occ*100)}</b> · {proj.bairro}</>}
+              </span>
+            </div>
+          )}
+
           {/* HEATMAP INTERATIVO + PAINEL DA UH */}
           <div className="hm-wrap">
             <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:13,gap:10,flexWrap:"wrap"}}>
                 <div>
-                  <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Heatmap interativo por pavimento</div>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>
+                    Heatmap interativo por pavimento
+                    {scn==='lb'&&<span style={{marginLeft:8,padding:"2px 7px",background:"var(--acc)",color:"#fff",borderRadius:6,fontSize:8}}>LOBIE</span>}
+                  </div>
                   <div style={{fontSize:10,color:"var(--text3)",marginTop:3,lineHeight:1.5}}>Cada célula = uma UH · cor = métrica · clique para ver DRE e intervalo Monte Carlo</div>
                 </div>
                 <div className="hm-tog no-print">
@@ -666,7 +723,7 @@ function App(){
               </div>
 
               <div style={{marginTop:10}}>
-                {byFloor.map(([floor,fus])=>{
+                {byFloorScn.map(([floor,fus])=>{
                   const sorted=[...fus].sort((a,b)=>{
                     const pa=parseInt(String(a.nome).slice(-2))||0;
                     const pb=parseInt(String(b.nome).slice(-2))||0;
@@ -706,61 +763,75 @@ function App(){
                   {hmM==='y'?pct(hmStats.max):brl(Math.round(hmStats.max))}
                 </span>
                 <span style={{fontSize:9,color:"var(--text3)",marginLeft:"auto",fontFamily:"'Space Mono',monospace",fontWeight:600}}>
-                  {results.length} UHs · {byFloor.length} andar{byFloor.length>1?"es":""} · prob méd DY&gt;12%: <b style={{color:"var(--green)"}}>{pct(avgProb12)}</b>
+                  {resultsScn.length} UHs · {byFloorScn.length} andar{byFloorScn.length>1?"es":""} · prob méd DY&gt;12%: <b style={{color:"var(--green)"}}>{pct(avgProb12)}</b>
                 </span>
               </div>
             </div>
 
-            {selU&&<UnitPanel r={selU} mc={mcData[selU.id]} proj={proj} hasL={hasL}/>}
+            {selU&&<UnitPanel rNat={results.find(x=>x.id===selU.id)||selU} mc={mcData[selU.id]} proj={proj} hasL={hasL} scn={scn}/>}
           </div>
 
           {/* DISTRIBUIÇÃO MONTE CARLO */}
-          <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,padding:15,marginBottom:13}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:13,flexWrap:"wrap",gap:10}}>
-              <div>
-                <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>
-                  Distribuição do Yield · Monte Carlo
-                </div>
-                <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>
-                  Faixa P10–P90 de cada UH · {NMC.toLocaleString('pt-BR')} cenários · mediana em linha preta
-                </div>
-              </div>
-              <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Space Mono',monospace",fontWeight:600}}>
-                σ ADR 7% · σ OCC 5pp · σ OTA 1.5pp
-              </div>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"110px 1fr 60px",gap:10,fontSize:9,color:"var(--text3)",fontWeight:700,paddingBottom:7,borderBottom:"1px solid var(--bg3)",textTransform:"uppercase",letterSpacing:.5}}>
-              <span>UH</span>
-              <span>Faixa 8%..18% a.a.</span>
-              <span style={{textAlign:"right"}}>P50</span>
-            </div>
-            <div style={{marginTop:6}}>
-              {results.map(r=>{
-                const m=mcData[r.id];
-                if(!m)return null;
-                const mn=8,mx=18;
-                const left=Math.max(0,Math.min(100,((m.nat.p10-mn)/(mx-mn))*100));
-                const right=Math.max(0,Math.min(100,((m.nat.p90-mn)/(mx-mn))*100));
-                const mid=Math.max(0,Math.min(100,((m.nat.p50-mn)/(mx-mn))*100));
-                const isSel=selU?.id===r.id;
-                return (
-                  <div key={r.id} className={`dist-row${isSel?" sel":""}`} onClick={()=>setSelId(r.id)}>
-                    <span style={{color:isSel?"var(--acc)":"var(--text2)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",paddingLeft:8}}>{r.nome}</span>
-                    <div style={{position:"relative",height:10,background:"var(--bg3)",borderRadius:5}}>
-                      <div style={{position:"absolute",left:`${left}%`,width:`${Math.max(1.5,right-left)}%`,top:0,bottom:0,borderRadius:5,background:`linear-gradient(90deg,${hmColor((m.nat.p10-mn)/(mx-mn))},${hmColor((m.nat.p90-mn)/(mx-mn))})`}}/>
-                      <div style={{position:"absolute",left:`${mid}%`,top:-2,bottom:-2,width:2,background:"var(--acc)"}}/>
-                      {/* marker 12% threshold */}
-                      <div style={{position:"absolute",left:`${((12-mn)/(mx-mn))*100}%`,top:-4,bottom:-4,width:1,borderLeft:"1px dashed var(--text3)",opacity:.4}}/>
+          {(()=>{
+            const mcs=results.map(r=>mcData[r.id]).filter(Boolean);
+            const allP50=mcs.map(m=>m?.[mcKey]?.p50||0).filter(v=>v>0);
+            const allP10=mcs.map(m=>m?.[mcKey]?.p10||0).filter(v=>v>0);
+            const allP90=mcs.map(m=>m?.[mcKey]?.p90||0).filter(v=>v>0);
+            const rawMin=allP10.length?Math.min(...allP10):8;
+            const rawMax=allP90.length?Math.max(...allP90):18;
+            const span=rawMax-rawMin;
+            const mn=Math.max(0,Math.floor(rawMin-span*0.05));
+            const mx=Math.ceil(rawMax+span*0.05);
+            const showThreshold=mn<=12&&mx>=12;
+            return (
+              <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,padding:15,marginBottom:13}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:13,flexWrap:"wrap",gap:10}}>
+                  <div>
+                    <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>
+                      Distribuição do Yield · Monte Carlo
+                      {scn==='lb'&&<span style={{marginLeft:8,padding:"2px 7px",background:"var(--acc)",color:"#fff",borderRadius:6,fontSize:8}}>LOBIE</span>}
                     </div>
-                    <span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,textAlign:"right",paddingRight:8,color:m.nat.p50>=12?"var(--green)":"var(--amber)"}}>{pct(m.nat.p50)}</span>
+                    <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>
+                      Faixa P10–P90 de cada UH · {NMC.toLocaleString('pt-BR')} cenários · mediana em linha preta
+                    </div>
                   </div>
-                );
-              })}
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text3)",marginTop:7,fontFamily:"'Space Mono',monospace",paddingLeft:118,paddingRight:68,fontWeight:600}}>
-              <span>8%</span><span style={{color:"var(--text2)"}}>12% meta</span><span>18%</span>
-            </div>
-          </div>
+                  <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Space Mono',monospace",fontWeight:600}}>
+                    σ ADR 7% · σ OCC 5pp · σ OTA 1.5pp
+                  </div>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"110px 1fr 60px",gap:10,fontSize:9,color:"var(--text3)",fontWeight:700,paddingBottom:7,borderBottom:"1px solid var(--bg3)",textTransform:"uppercase",letterSpacing:.5}}>
+                  <span>UH</span>
+                  <span>Faixa {mn}%..{mx}% a.a.</span>
+                  <span style={{textAlign:"right"}}>P50</span>
+                </div>
+                <div style={{marginTop:6}}>
+                  {results.map(r=>{
+                    const m=mcData[r.id];
+                    if(!m||!m[mcKey])return null;
+                    const b=m[mcKey];
+                    const left=Math.max(0,Math.min(100,((b.p10-mn)/(mx-mn))*100));
+                    const right=Math.max(0,Math.min(100,((b.p90-mn)/(mx-mn))*100));
+                    const mid=Math.max(0,Math.min(100,((b.p50-mn)/(mx-mn))*100));
+                    const isSel=selU?.id===r.id;
+                    return (
+                      <div key={r.id} className={`dist-row${isSel?" sel":""}`} onClick={()=>setSelId(r.id)}>
+                        <span style={{color:isSel?"var(--acc)":"var(--text2)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",paddingLeft:8}}>{r.nome}</span>
+                        <div style={{position:"relative",height:10,background:"var(--bg3)",borderRadius:5}}>
+                          <div style={{position:"absolute",left:`${left}%`,width:`${Math.max(1.5,right-left)}%`,top:0,bottom:0,borderRadius:5,background:`linear-gradient(90deg,${hmColor((b.p10-mn)/(mx-mn))},${hmColor((b.p90-mn)/(mx-mn))})`}}/>
+                          <div style={{position:"absolute",left:`${mid}%`,top:-2,bottom:-2,width:2,background:"var(--acc)"}}/>
+                          {showThreshold&&<div style={{position:"absolute",left:`${((12-mn)/(mx-mn))*100}%`,top:-4,bottom:-4,width:1,borderLeft:"1px dashed var(--text3)",opacity:.4}}/>}
+                        </div>
+                        <span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,textAlign:"right",paddingRight:8,color:b.p50>=12?"var(--green)":"var(--amber)"}}>{pct(b.p50)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text3)",marginTop:7,fontFamily:"'Space Mono',monospace",paddingLeft:118,paddingRight:68,fontWeight:600}}>
+                  <span>{mn}%</span>{showThreshold&&<span style={{color:"var(--text2)"}}>12% meta</span>}<span>{mx}%</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* RANKING */}
           <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,overflow:"hidden"}}>
@@ -888,52 +959,68 @@ function F({l,children}){
   );
 }
 
-function UnitPanel({r,mc,proj,hasL}){
-  if(!mc) return null;
-  const cn=yc(r.y);
-  const {resL,yL}=calcL(r,proj);
-  const cl=yc(yL);
-  const delt=yL-r.y;
-  const otaVal=r.recB-r.recL;
-  const feeVal=r.ni-r.res;
-  const dre=[
-    ["Receita bruta",r.recB,"var(--text)",false],
-    ["(−) OTA 16,5%",-otaVal,"var(--red)",false],
-    ["(=) Rec. líq.",r.recL,"var(--text)",false],
-    ["(−) Condomínio",-proj.cond,"var(--red)",false],
-    ["(−) Energia/Água",-proj.energia,"var(--red)",false],
-    ["(−) IPTU",-proj.iptu,"var(--red)",false],
-    ["(=) NI",r.ni,"var(--text)",false],
-    ["(−) Taxa Lobie 12%",-feeVal,"var(--red)",false],
-    ["= Resultado líq.",r.res,"var(--green)",true]
-  ];
-  const vista=VISTAS.find(v=>v.key===r.vista);
-  const tipo=TIPOS.find(t=>t.key===r.tipo);
+function UnitPanel({rNat,mc,proj,hasL,scn}){
+  if(!mc||!rNat) return null;
+  const isLb=scn==='lb'&&hasL;
+  const lb=hasL?calcL(rNat,proj):null;
+  // Primary (active) scenario values
+  const A=isLb?{
+    adr:proj.adrLobie,occ:proj.occLobie/100,
+    recB:lb.recBL,recL:lb.recLL,ni:lb.niL,res:lb.resL,y:lb.yL
+  }:{
+    adr:rNat.adr,occ:rNat.occ,
+    recB:rNat.recB,recL:rNat.recL,ni:rNat.ni,res:rNat.res,y:rNat.y
+  };
+  // Alternate scenario (for comparison)
+  const B=isLb?{
+    adr:rNat.adr,occ:rNat.occ,res:rNat.res,y:rNat.y,label:"Modelo Natural",color:"var(--green)"
+  }:(lb?{
+    adr:proj.adrLobie,occ:proj.occLobie/100,res:lb.resL,y:lb.yL,label:"Cenário Lobie",color:"var(--acc)"
+  }:null);
+  const mcA=isLb?(mc.lb||mc.nat):mc.nat;
+  const mcB=isLb?mc.nat:(mc.lb||null);
+  const delt=B?B.y-A.y:0;
+  const cA=yc(A.y);
+  const vista=VISTAS.find(v=>v.key===rNat.vista);
+  const tipo=TIPOS.find(t=>t.key===rNat.tipo);
   return (
-    <div className="uh-panel">
+    <div className="uh-panel" style={isLb?{borderTop:"3px solid var(--acc)"}:{borderTop:"3px solid var(--green)"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",paddingBottom:13,borderBottom:"1px solid var(--bg3)",marginBottom:13,gap:9}}>
         <div>
-          <div style={{fontSize:18,fontWeight:700,letterSpacing:-.3,lineHeight:1.1}}>{r.nome}</div>
+          <div style={{fontSize:18,fontWeight:700,letterSpacing:-.3,lineHeight:1.1}}>{rNat.nome}</div>
           <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.7,marginTop:5,fontWeight:600,lineHeight:1.5}}>
-            {tipo?.label} · Pav. {r.andar} · {vista?.label}
+            {tipo?.label} · Pav. {rNat.andar} · {vista?.label}
+          </div>
+          <div style={{fontSize:8,fontWeight:700,letterSpacing:.5,textTransform:"uppercase",marginTop:6,color:isLb?"var(--acc)":"var(--green)"}}>
+            ■ {isLb?"Cenário Lobie · Gestão":"Modelo Natural · AirDNA"}
           </div>
         </div>
-        <span className={`badge ${cn.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:11,padding:"4px 10px",whiteSpace:"nowrap"}}>DY {pct(r.y)}</span>
+        <span className={`badge ${cA.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:11,padding:"4px 10px",whiteSpace:"nowrap"}}>DY {pct(A.y)}</span>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 10px",fontSize:10,marginBottom:13}}>
-        <span style={{color:"var(--text3)"}}>Área útil</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{r.area}m²</span>
-        <span style={{color:"var(--text3)"}}>SM</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600,color:r.SM>0.8?"var(--green)":r.SM>0.65?"var(--amber)":"var(--red)"}}>{r.SM.toFixed(3)}</span>
-        <span style={{color:"var(--text3)"}}>ADR estimado</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(r.adr)}</span>
-        <span style={{color:"var(--text3)"}}>Ocupação</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{pct(r.occ*100)}</span>
-        <span style={{color:"var(--text3)"}}>Preço tabela</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(r.preco)}</span>
-        <span style={{color:"var(--text3)"}}>R$/m²</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(r.preco/r.area))}</span>
+        <span style={{color:"var(--text3)"}}>Área útil</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{rNat.area}m²</span>
+        <span style={{color:"var(--text3)"}}>SM</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600,color:rNat.SM>0.8?"var(--green)":rNat.SM>0.65?"var(--amber)":"var(--red)"}}>{rNat.SM.toFixed(3)}</span>
+        <span style={{color:"var(--text3)"}}>ADR {isLb?"Lobie":"estimado"}</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:isLb?"var(--acc)":"var(--text)"}}>{brl(A.adr)}</span>
+        <span style={{color:"var(--text3)"}}>Ocupação</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:isLb?"var(--acc)":"var(--text)"}}>{pct(A.occ*100)}</span>
+        <span style={{color:"var(--text3)"}}>Preço tabela</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(rNat.preco)}</span>
+        <span style={{color:"var(--text3)"}}>R$/m²</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(rNat.preco/rNat.area))}</span>
       </div>
 
-      <div style={{fontSize:9,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>DRE mensal</div>
+      <div style={{fontSize:9,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>
+        DRE mensal <span style={{color:isLb?"var(--acc)":"var(--green)"}}>· {isLb?"cenário Lobie":"modelo natural"}</span>
+      </div>
       <table style={{width:"100%",fontSize:11,borderCollapse:"collapse",marginBottom:6}}>
         <tbody>
-          {dre.map(([l,v,c,hi],i)=>(
+          {[["Receita bruta",A.recB,"var(--text)",false],
+            ["(−) OTA 16,5%",-(A.recB-A.recL),"var(--red)",false],
+            ["(=) Rec. líq.",A.recL,"var(--text)",false],
+            ["(−) Condomínio",-proj.cond,"var(--red)",false],
+            ["(−) Energia/Água",-proj.energia,"var(--red)",false],
+            ["(−) IPTU",-proj.iptu,"var(--red)",false],
+            ["(=) NI",A.ni,"var(--text)",false],
+            ["(−) Taxa Lobie 12%",-(A.ni-A.res),"var(--red)",false],
+            ["= Resultado líq.",A.res,"var(--green)",true]].map(([l,v,c,hi],i)=>(
             <tr key={i}>
               <td style={{padding:"4px 0",color:hi?"var(--green)":"var(--text2)",fontWeight:hi?700:400,borderTop:hi?"1px solid var(--border)":"none",fontSize:hi?11:10}}>{l}</td>
               <td style={{padding:"4px 0",textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:hi?700:500,color:c,borderTop:hi?"1px solid var(--border)":"none",fontSize:hi?12:11}}>
@@ -947,60 +1034,62 @@ function UnitPanel({r,mc,proj,hasL}){
       {/* MC INTERVAL */}
       <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--bg3)"}}>
         <div style={{fontSize:9,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:10}}>
-          Monte Carlo · {NMC.toLocaleString('pt-BR')} cenários
+          Monte Carlo · {NMC.toLocaleString('pt-BR')} cenários <span style={{color:isLb?"var(--acc)":"var(--green)"}}>· {isLb?"Lobie":"natural"}</span>
         </div>
-        {(()=>{const rng=15,o=5;
-          const l=Math.max(0,Math.min(100,((mc.nat.p10-o)/rng)*100));
-          const r2=Math.max(2,Math.min(100,((mc.nat.p90-mc.nat.p10)/rng)*100));
-          const mid=Math.max(0,Math.min(100,((mc.nat.p50-o)/rng)*100));
+        {(()=>{
+          const o=Math.max(0,Math.floor(mcA.p10-2)),rng=Math.max(5,(mcA.p90-o)+2);
+          const l=Math.max(0,Math.min(100,((mcA.p10-o)/rng)*100));
+          const r2=Math.max(2,Math.min(100,((mcA.p90-mcA.p10)/rng)*100));
+          const mid=Math.max(0,Math.min(100,((mcA.p50-o)/rng)*100));
           const thr=Math.max(0,Math.min(100,((12-o)/rng)*100));
+          const showThr=12>=o&&12<=o+rng;
           return (
             <div style={{position:"relative",height:9,background:"var(--bg3)",borderRadius:5,marginBottom:5}}>
-              <div style={{position:"absolute",left:`${l}%`,width:`${r2}%`,top:0,bottom:0,borderRadius:5,background:`linear-gradient(90deg,${hmColor((mc.nat.p10-o)/rng)},${hmColor((mc.nat.p90-o)/rng)})`}}/>
+              <div style={{position:"absolute",left:`${l}%`,width:`${r2}%`,top:0,bottom:0,borderRadius:5,background:`linear-gradient(90deg,${hmColor((mcA.p10-o)/rng)},${hmColor((mcA.p90-o)/rng)})`}}/>
               <div style={{position:"absolute",left:`${mid}%`,top:-3,bottom:-3,width:2,background:"var(--acc)"}}/>
-              <div style={{position:"absolute",left:`${thr}%`,top:-4,bottom:-4,width:1,borderLeft:"1px dashed var(--text3)",opacity:.6}}/>
+              {showThr&&<div style={{position:"absolute",left:`${thr}%`,top:-4,bottom:-4,width:1,borderLeft:"1px dashed var(--text3)",opacity:.6}}/>}
             </div>
           );
         })()}
         <div style={{display:"flex",justifyContent:"space-between",fontSize:9,fontFamily:"'Space Mono',monospace"}}>
-          <span style={{color:"var(--text3)"}}>P10 <b>{pct(mc.nat.p10)}</b></span>
-          <b style={{color:"var(--acc)"}}>P50 {pct(mc.nat.p50)}</b>
-          <span style={{color:"var(--text3)"}}>P90 <b>{pct(mc.nat.p90)}</b></span>
+          <span style={{color:"var(--text3)"}}>P10 <b>{pct(mcA.p10)}</b></span>
+          <b style={{color:"var(--acc)"}}>P50 {pct(mcA.p50)}</b>
+          <span style={{color:"var(--text3)"}}>P90 <b>{pct(mcA.p90)}</b></span>
         </div>
-        <div style={{marginTop:10,padding:"9px 12px",background:mc.nat.prob12>=50?"var(--gbg)":"var(--abg)",border:`1px solid ${mc.nat.prob12>=50?"var(--gb)":"var(--ab)"}`,borderRadius:9,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+        <div style={{marginTop:10,padding:"9px 12px",background:mcA.prob12>=50?"var(--gbg)":"var(--abg)",border:`1px solid ${mcA.prob12>=50?"var(--gb)":"var(--ab)"}`,borderRadius:9,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
           <span style={{fontSize:10,color:"var(--text2)",fontWeight:600}}>Prob. DY &gt; 12% a.a.</span>
-          <b style={{fontFamily:"'Space Mono',monospace",fontSize:16,color:mc.nat.prob12>=50?"var(--green)":"var(--amber)"}}>{pct(mc.nat.prob12)}</b>
+          <b style={{fontFamily:"'Space Mono',monospace",fontSize:16,color:mcA.prob12>=50?"var(--green)":"var(--amber)"}}>{pct(mcA.prob12)}</b>
         </div>
         <div style={{marginTop:8,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
           <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:7,padding:"7px 9px"}}>
             <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Res. P10</div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,marginTop:2}}>{brl(Math.round(mc.nat.p10r))}</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,marginTop:2}}>{brl(Math.round(mcA.p10r))}</div>
           </div>
           <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:7,padding:"7px 9px"}}>
             <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Res. P90</div>
-            <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,marginTop:2}}>{brl(Math.round(mc.nat.p90r))}</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,marginTop:2}}>{brl(Math.round(mcA.p90r))}</div>
           </div>
         </div>
       </div>
 
-      {/* LOBIE */}
-      {hasL&&mc.lb&&(
+      {/* CENÁRIO ALTERNATIVO (comparativo) */}
+      {B&&mcB&&(
         <div style={{marginTop:13,paddingTop:12,borderTop:"1px solid var(--bg3)"}}>
-          <div style={{fontSize:9,fontWeight:700,color:"var(--acc)",textTransform:"uppercase",letterSpacing:.8,marginBottom:9}}>
-            Cenário Lobie · gestão
+          <div style={{fontSize:9,fontWeight:700,color:B.color,textTransform:"uppercase",letterSpacing:.8,marginBottom:9}}>
+            Comparativo · {B.label}
           </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px 10px",fontSize:10}}>
             <span style={{color:"var(--text3)"}}>ADR / OCC</span>
-            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(proj.adrLobie)} · {pct(proj.occLobie)}</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(B.adr)} · {pct(B.occ*100)}</span>
             <span style={{color:"var(--text3)"}}>Resultado/mês</span>
-            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:cl.tc}}>{brl(Math.round(resL))}</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:yc(B.y).tc}}>{brl(Math.round(B.res))}</span>
             <span style={{color:"var(--text3)"}}>Yield anual</span>
-            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:cl.tc}}>{pct(yL)}</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:yc(B.y).tc}}>{pct(B.y)}</span>
             <span style={{color:"var(--text3)"}}>Prob. &gt;12%</span>
-            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:mc.lb.prob12>=50?"var(--green)":"var(--amber)"}}>{pct(mc.lb.prob12)}</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:mcB.prob12>=50?"var(--green)":"var(--amber)"}}>{pct(mcB.prob12)}</span>
           </div>
           <div style={{marginTop:9,padding:"8px 10px",background:delt>=0?"var(--gbg)":"var(--rbg)",border:`1px solid ${delt>=0?"var(--gb)":"var(--rb)"}`,borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
-            <span style={{fontSize:10,color:"var(--text2)",fontWeight:600}}>Valor da gestão Lobie</span>
+            <span style={{fontSize:10,color:"var(--text2)",fontWeight:600}}>Delta {B.label} vs ativo</span>
             <b style={{fontFamily:"'Space Mono',monospace",fontSize:14,color:delt>=0?"var(--green)":"var(--red)"}}>{delt>=0?"+":""}{pct(delt)}</b>
           </div>
         </div>
