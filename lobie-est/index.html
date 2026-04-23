@@ -8,6 +8,8 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';</script>
 <style>
 :root{
   --bg:#fff;--bg2:#fafafa;--bg3:#f0f0f0;
@@ -75,6 +77,19 @@ input[type=number]::-webkit-inner-spin-button{opacity:.3}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:var(--bg3)}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.hm-cell{flex:1;min-width:18px;height:28px;border-radius:5px;cursor:pointer;transition:transform .15s,box-shadow .15s;position:relative}
+.hm-cell:hover{transform:scaleY(1.22);box-shadow:0 0 0 1.5px var(--acc);z-index:2}
+.hm-cell.sel{transform:scaleY(1.28);box-shadow:0 0 0 2px var(--acc);z-index:3}
+.hm-tog{display:flex;gap:3px;padding:3px;background:var(--bg2);border:1px solid var(--border);border-radius:50px;width:fit-content}
+.hm-tog button{padding:5px 13px;border-radius:50px;border:none;font:600 10px 'Syne',sans-serif;background:transparent;color:var(--text2);cursor:pointer;letter-spacing:.4px;text-transform:uppercase;transition:all .15s}
+.hm-tog button.a{background:var(--acc);color:#fff}
+.hm-tog button:hover:not(.a){color:var(--text)}
+.hm-wrap{display:grid;grid-template-columns:1fr 340px;gap:13px;margin-bottom:13px;align-items:start}
+.uh-panel{background:#fff;border:1px solid var(--border);border-radius:14px;padding:17px;position:sticky;top:100px;align-self:start}
+.dist-row{display:grid;grid-template-columns:110px 1fr 60px;gap:10px;align-items:center;padding:5px 0;cursor:pointer;font-size:11px;border-radius:7px;transition:background .15s}
+.dist-row:hover{background:var(--bg2)}
+.dist-row.sel{background:var(--bg2)}
+@media(max-width:960px){.hm-wrap{grid-template-columns:1fr}.uh-panel{position:static}}
 </style>
 </head>
 <body>
@@ -164,6 +179,86 @@ const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFr
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
 
+/* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
+   Simulação estocástica por UH: ADR~N(μ,7%σ), OCC~σ=5pp, OTA~N(16.5%,1.5%)
+   Gera faixa P10/P50/P90 e prob(DY>12%). Paralela ao cenário Lobie. */
+const gauss=()=>{const u=Math.random()+1e-9,v=Math.random()+1e-9;return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+const NMC=1000;
+function mc(r,proj,bd,adrL,occL){
+  const run=(adrMu,occMu)=>{
+    const ys=[],rs=[];
+    for(let i=0;i<NMC;i++){
+      const a=Math.max(0,adrMu+adrMu*0.07*gauss());
+      const o=Math.min(.95,Math.max(.2,occMu+0.05*gauss()));
+      const ot=Math.min(.22,Math.max(.12,OTA+0.015*gauss()));
+      const rL=a*o*DIAS*(1-ot);
+      const ni=rL-proj.cond-proj.energia-proj.iptu;
+      const res=ni*(1-TXL);
+      const y=r.preco>0?Math.max(0,res*12/r.preco*100):0;
+      ys.push(y);rs.push(res);
+    }
+    ys.sort((a,b)=>a-b);rs.sort((a,b)=>a-b);
+    const q=(a,p)=>a[Math.floor((a.length-1)*p)];
+    return{p10:q(ys,.1),p50:q(ys,.5),p90:q(ys,.9),p10r:q(rs,.1),p50r:q(rs,.5),p90r:q(rs,.9),prob12:ys.filter(v=>v>=12).length/NMC*100};
+  };
+  return{nat:run(r.adr,bd.occ),lb:(adrL>0&&occL>0)?run(adrL,occL/100):null};
+}
+/* ═══ PARSER DO QUADRO DE ÁREAS (Decreto 16721/98 RJ) ══════════════
+   3 padrões: UH direta (pav 2), range "301 AO 2001" (pav 3-20 × 18),
+   cobertura "UNID. 2101" (pav 21). Extrai ID, área útil, pavimento. */
+function parsePlantaText(text){
+  const units=[];let nid=1;
+  const nf=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'));
+  const lines=text.split(/\r?\n/);
+  for(const raw of lines){
+    const l=raw.trim();
+    let m=l.match(/^(\d{3})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+1\s+[\d.,]+\s+m.?\s+([\d,]+)\s*m/);
+    if(m){const uid=m[1],au=nf(m[3]),pav=parseInt(uid[0]);units.push({id:nid++,nome:uid,area:au,andar:pav,vista:'sem_vista',tipo:'studio'});continue;}
+    m=l.match(/^(\d{3})\s+AO\s+(\d{4})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+(\d+)\s+[\d.,]+\s+m.?\s+([\d,]+)\s*m/);
+    if(m){
+      const start=parseInt(m[1]),end=parseInt(m[2]),count=parseInt(m[5]),auTotal=nf(m[6]);
+      const au=Math.round((auTotal/count)*100)/100;
+      const pos=start%100,sf=Math.floor(start/100),ef=Math.floor(end/100);
+      for(let f=sf;f<=ef;f++){
+        const uid=f<10?`${f}${String(pos).padStart(2,'0')}`:`${f}${String(pos).padStart(2,'0')}`;
+        units.push({id:nid++,nome:uid,area:au,andar:f,vista:'sem_vista',tipo:'studio'});
+      }
+      continue;
+    }
+    m=l.match(/^UNID\.?\s+(\d{4})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+1\s+[\d.,]+\s+m.?\s+([\d,]+)\s*m/);
+    if(m){const uid=m[1],au=nf(m[4]),pav=parseInt(uid.slice(0,2));units.push({id:nid++,nome:uid,area:au,andar:pav,vista:'sem_vista',tipo:'studio'});}
+  }
+  return units;
+}
+async function extractPdfText(file){
+  if(!window.pdfjsLib) throw new Error('PDF.js não carregou');
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  let text='';
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const content=await page.getTextContent();
+    const rows={};
+    content.items.forEach(it=>{
+      const y=Math.round(it.transform[5]);
+      if(!rows[y])rows[y]=[];
+      rows[y].push({x:it.transform[4],s:it.str});
+    });
+    const ys=Object.keys(rows).map(Number).sort((a,b)=>b-a);
+    ys.forEach(y=>{text+=rows[y].sort((a,b)=>a.x-b.x).map(o=>o.s).join(' ')+'\n';});
+  }
+  return text;
+}
+
+const HMPAL=["#e04545","#e8a33c","#ffb547","#d4e157","#6bc76b","#14c990","#0bc0ed"];
+const hmColor=t=>{
+  t=Math.max(0,Math.min(1,t||0));
+  const x=t*(HMPAL.length-1),i0=Math.floor(x),i1=Math.min(HMPAL.length-1,i0+1),f=x-i0;
+  const p=s=>[parseInt(s.slice(1,3),16),parseInt(s.slice(3,5),16),parseInt(s.slice(5,7),16)];
+  const a=p(HMPAL[i0]),b=p(HMPAL[i1]);
+  return`rgb(${Math.round(a[0]+(b[0]-a[0])*f)},${Math.round(a[1]+(b[1]-a[1])*f)},${Math.round(a[2]+(b[2]-a[2])*f)})`;
+};
+
 const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,precoM2:22000,cond:800,energia:380,iptu:280,adrLobie:750,occLobie:85};
 const U0=[
   {id:1,nome:"Std 01",area:40.39,andar:2,vista:"sem_vista",tipo:"studio"},
@@ -195,6 +290,59 @@ function App(){
     const m={};results.forEach(r=>{if(!m[r.andar])m[r.andar]=[];m[r.andar].push(r);});
     return Object.entries(m).sort((a,b)=>+b[0]-+a[0]);
   },[results]);
+
+  const mcData=useMemo(()=>{const m={};results.forEach(r=>{m[r.id]=mc(r,proj,bd,proj.adrLobie,proj.occLobie);});return m;},[results,proj,bd]);
+  const[selId,setSelId]=useState(null);
+  const[hmM,setHmM]=useState("y");
+  const selU=useMemo(()=>{const f=selId!=null?results.find(r=>r.id===selId):null;return f||(results.length?[...results].sort((a,b)=>b.y-a.y)[0]:null);},[selId,results]);
+  const hmVal=r=>hmM==='y'?r.y:hmM==='res'?r.res:r.adr;
+  const hmStats=useMemo(()=>{if(!results.length)return{min:0,max:1};const vs=results.map(r=>hmM==='y'?r.y:hmM==='res'?r.res:r.adr);return{min:Math.min(...vs),max:Math.max(...vs)};},[results,hmM]);
+  const avgProb12=useMemo(()=>{if(!results.length)return 0;return results.reduce((s,r)=>s+(mcData[r.id]?.nat?.prob12||0),0)/results.length;},[results,mcData]);
+  const maxU=useMemo(()=>Math.max(1,...byFloor.map(([,fs])=>fs.length)),[byFloor]);
+
+  /* ═══ IMPORT STATE ══════════════════════════════════════ */
+  const[showImp,setShowImp]=useState(false);
+  const[impTxt,setImpTxt]=useState("");
+  const[impMsg,setImpMsg]=useState("");
+  const[impBusy,setImpBusy]=useState(false);
+  const[filter,setFilter]=useState("");
+
+  const loadUnits=(us,projUpdates)=>{
+    if(!us.length){setImpMsg("Nenhuma UH reconhecida no texto. Verifique o padrão do quadro.");return;}
+    setUnits(us);
+    setNid(Math.max(...us.map(u=>u.id))+1);
+    if(projUpdates)setProj(p=>({...p,...projUpdates}));
+    setSelId(null);
+    setImpMsg(`✓ ${us.length} UHs carregadas · ${new Set(us.map(u=>u.andar)).size} pavimentos`);
+    setTimeout(()=>{setShowImp(false);setImpMsg("");setImpTxt("");},900);
+  };
+
+  const handlePdf=async(file)=>{
+    setImpBusy(true);setImpMsg("Lendo PDF...");
+    try{
+      const txt=await extractPdfText(file);
+      const us=parsePlantaText(txt);
+      loadUnits(us);
+    }catch(e){setImpMsg("Erro: "+e.message);}
+    setImpBusy(false);
+  };
+
+  const handleText=()=>{
+    setImpBusy(true);
+    const us=parsePlantaText(impTxt);
+    loadUnits(us);
+    setImpBusy(false);
+  };
+
+  const loadPreset=async()=>{
+    setImpBusy(true);setImpMsg("Carregando Patrimar Nilo Peçanha...");
+    try{
+      const r=await fetch('./nilo-pecanha.json');
+      const d=await r.json();
+      loadUnits(d.units,d.projeto);
+    }catch(e){setImpMsg("Erro: "+e.message);}
+    setImpBusy(false);
+  };
 
   const vgv=useMemo(()=>units.reduce((s,u)=>s+u.area*(proj.precoM2||0),0),[units,proj.precoM2]);
   const avgY=results.length?results.reduce((s,r)=>s+r.y,0)/results.length:0;
@@ -286,7 +434,8 @@ function App(){
                 </div>
               </div>
             </div>
-            <div style={{marginTop:20,display:"flex",justifyContent:"flex-end"}}>
+            <div style={{marginTop:20,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <button className="btn" onClick={()=>setShowImp(true)} style={{fontSize:12}}>📋 Importar planta (PDF / quadro de áreas)</button>
               <button className="btn btn-p btn-lg" onClick={()=>setStep(2)}>Configurar Unidades →</button>
             </div>
           </div>
@@ -301,12 +450,13 @@ function App(){
               <h1 style={{fontSize:20,fontWeight:700}}>{proj.nome} <span className="badge bb2" style={{fontSize:11,verticalAlign:"middle"}}>{units.length} UHs</span></h1>
               <p style={{fontSize:11,color:"var(--text2)",marginTop:3}}>{proj.endereco} · {proj.bairro} · DI {bd.di.toFixed(3)}</p>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,padding:"6px 12px"}}>
                 <span style={{fontSize:9,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:.5,whiteSpace:"nowrap"}}>Preço/m²</span>
                 <input type="number" value={proj.precoM2} onChange={e=>upP('precoM2',e.target.value)} style={{width:85,borderRadius:7,padding:"4px 7px",fontSize:13,fontFamily:"'Space Mono',monospace",fontWeight:700}}/>
                 <span style={{fontSize:9,color:"var(--text3)",whiteSpace:"nowrap"}}>VGV <b style={{fontFamily:"'Space Mono',monospace",color:"var(--text)",fontSize:11}}>{brl(vgv)}</b></span>
               </div>
+              <button className="btn" onClick={()=>setShowImp(true)}>📋 Importar planta</button>
               <button className="btn" onClick={add}>+ Adicionar UH</button>
             </div>
           </div>
@@ -315,12 +465,20 @@ function App(){
             <b>Preço/m² uniforme:</b> o yield compara unidades na mesma base — revela eficiência operacional pura (área, vista, andar, localização), sem distorção pela precificação do incorporador. Alterações de preço por UH pertencem ao incorporador, não ao modelo Lobie.
           </div>
 
+          {units.length>30&&(
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,flexWrap:"wrap"}}>
+              <input placeholder="Filtrar por nome de UH (ex: 201, 1504, 21)..." value={filter} onChange={e=>setFilter(e.target.value)} style={{flex:1,maxWidth:340,fontSize:12}}/>
+              <span style={{fontSize:10,color:"var(--text3)",fontWeight:600}}>{units.filter(u=>!filter||String(u.nome).toLowerCase().includes(filter.toLowerCase())).length} / {units.length} UHs</span>
+              <span style={{fontSize:10,color:"var(--text3)"}}>Pav {Math.min(...units.map(u=>u.andar))}–{Math.max(...units.map(u=>u.andar))} · áreas {Math.min(...units.map(u=>u.area)).toFixed(1)}–{Math.max(...units.map(u=>u.area)).toFixed(1)}m²</span>
+            </div>
+          )}
+
           <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,overflow:"hidden"}}>
-            <div style={{overflowX:"auto"}}>
+            <div style={{overflowX:"auto",maxHeight:units.length>30?520:"none",overflowY:units.length>30?"auto":"visible"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}} className="itbl">
-                <thead><tr>{["Nome","Área m²","Andar","Vista","Tipologia","Preço (área × R$/m²)","SM",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+                <thead style={{position:"sticky",top:0,background:"var(--bg2)",zIndex:2}}><tr>{["Nome","Área m²","Andar","Vista","Tipologia","Preço","SM",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
                 <tbody>
-                  {units.map(u=>{
+                  {units.filter(u=>!filter||String(u.nome).toLowerCase().includes(filter.toLowerCase())).map(u=>{
                     const{SM}=sm(u,proj.distPraia);
                     return(
                       <tr key={u.id}>
@@ -345,7 +503,10 @@ function App(){
             </div>
             <div style={{padding:"8px 13px",borderTop:"1px solid var(--bg3)",background:"var(--bg2)",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
               <span style={{fontSize:10,color:"var(--text2)"}}><b>{units.length} unidades</b> · VGV <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b> · SM = SpatialModifier (quanto a UH aproveita do DI do bairro)</span>
-              <button className="btn" onClick={add} style={{fontSize:10}}>+ UH</button>
+              <div style={{display:"flex",gap:6}}>
+                <button className="btn" onClick={()=>setShowImp(true)} style={{fontSize:10}}>📋 Importar</button>
+                <button className="btn" onClick={add} style={{fontSize:10}}>+ UH</button>
+              </div>
             </div>
           </div>
 
@@ -489,61 +650,116 @@ function App(){
             </>}
           </div>
 
-          {/* HEATMAP */}
-          <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:14,padding:15,marginBottom:13}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:13,flexWrap:"wrap",gap:7}}>
-              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Mapa de Rentabilidade por Pavimento</div>
-              {hasL&&<div style={{fontSize:9,fontWeight:600,display:"flex",gap:10}}><span style={{color:"var(--text3)"}}>■ AirDNA LTM</span><span style={{color:"var(--acc)"}}>■ Cenário Lobie · ADR {brl(proj.adrLobie)} · {pct(proj.occLobie)}</span></div>}
-            </div>
-            {byFloor.map(([floor,fus])=>(
-              <div key={floor} style={{marginBottom:13}}>
-                <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:9}}>
-                  <span style={{background:"var(--bg3)",borderRadius:6,padding:"1px 9px",fontSize:9,fontWeight:700,fontFamily:"'Space Mono',monospace"}}>{floor}º andar</span>
-                  <span style={{fontSize:9,color:"var(--text3)",fontWeight:600}}>{fus.length} UH{fus.length>1?"s":""}</span>
-                  <div style={{flex:1,height:1,background:"var(--border)"}}/>
+          {/* HEATMAP INTERATIVO + PAINEL DA UH */}
+          <div className="hm-wrap">
+            <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,padding:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:13,gap:10,flexWrap:"wrap"}}>
+                <div>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>Heatmap interativo por pavimento</div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:3,lineHeight:1.5}}>Cada célula = uma UH · cor = métrica · clique para ver DRE e intervalo Monte Carlo</div>
                 </div>
-                <div style={{display:"flex",gap:9,flexWrap:"wrap"}}>
-                  {fus.map(r=>{
-                    const cn=yc(r.y);
-                    const{resL,yL}=calcL(r,proj);
-                    const cl=yc(yL);
-                    const delt=yL-r.y;
-                    return(
-                      <div key={r.id} className="ucard" style={{minWidth:hasL?278:152,maxWidth:hasL?340:180}}>
-                        <div style={{padding:"8px 11px 7px",borderBottom:"1px solid var(--bg3)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                          <b style={{fontSize:12}}>{r.nome}</b>
-                          <span style={{fontSize:9,color:"var(--text3)"}}>{r.area}m² · {VISTAS.find(v=>v.key===r.vista)?.short} · SM {r.SM.toFixed(2)}</span>
-                        </div>
-                        <div style={{display:"grid",gridTemplateColumns:hasL?"1fr 1fr":"1fr"}}>
-                          <div style={{background:cn.bg,padding:"9px 11px",borderRight:hasL?"1px solid var(--border)":"none"}}>
-                            <div style={{fontSize:8,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,marginBottom:3}}>Modelo natural</div>
-                            <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700,color:cn.tc,lineHeight:1,marginBottom:5}}>{pct(r.y)}</div>
-                            <div style={{fontSize:9,color:"var(--text2)",lineHeight:1.8}}>
-                              ADR <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(r.adr)}</b><br/>
-                              <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(Math.round(r.res))}</b>/mês
-                            </div>
-                          </div>
-                          {hasL&&(
-                            <div style={{background:cl.bg,padding:"9px 11px",position:"relative"}}>
-                              <div style={{fontSize:8,fontWeight:700,color:"var(--acc)",textTransform:"uppercase",letterSpacing:.5,marginBottom:3}}>Cenário Lobie</div>
-                              <div style={{fontFamily:"'Space Mono',monospace",fontSize:20,fontWeight:700,color:cl.tc,lineHeight:1,marginBottom:5}}>{pct(yL)}</div>
-                              <div style={{fontSize:9,color:"var(--text2)",lineHeight:1.8}}>
-                                ADR <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(proj.adrLobie)}</b><br/>
-                                <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(Math.round(resL))}</b>/mês
-                              </div>
-                              <div style={{position:"absolute",top:7,right:7,background:delt>=0?"var(--gbg)":"var(--rbg)",border:`1px solid ${delt>=0?"var(--gb)":"var(--rb)"}`,borderRadius:5,padding:"2px 6px",fontSize:8,fontWeight:700,color:delt>=0?"var(--green)":"var(--red)",fontFamily:"'Space Mono',monospace"}}>
-                                {delt>=0?"+":""}{pct(delt)}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div style={{padding:"4px 11px",background:"var(--bg3)",fontSize:8,color:"var(--text3)",fontFamily:"'Space Mono',monospace",textAlign:"right"}}>{brl(r.preco)} · R${Math.round(proj.precoM2)}/m²</div>
-                      </div>
-                    );
-                  })}
+                <div className="hm-tog no-print">
+                  {[["y","DY a.a."],["res","Res./mês"],["adr","ADR"]].map(([k,l])=>(
+                    <button key={k} className={hmM===k?"a":""} onClick={()=>setHmM(k)}>{l}</button>
+                  ))}
                 </div>
               </div>
-            ))}
+
+              <div style={{marginTop:10}}>
+                {byFloor.map(([floor,fus])=>{
+                  const sorted=[...fus].sort((a,b)=>{
+                    const pa=parseInt(String(a.nome).slice(-2))||0;
+                    const pb=parseInt(String(b.nome).slice(-2))||0;
+                    return pa-pb;
+                  });
+                  return (
+                    <div key={floor} style={{display:"grid",gridTemplateColumns:"58px 1fr",gap:9,alignItems:"center",marginBottom:3}}>
+                      <div style={{fontSize:10,fontFamily:"'Space Mono',monospace",color:"var(--text3)",textAlign:"right",fontWeight:600}}>
+                        {+floor===21?"COB":`${floor}º and.`}
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:`repeat(${maxU},minmax(0,1fr))`,gap:maxU>20?2:3,height:maxU>20?18:28}}>
+                        {sorted.map(r=>{
+                          const v=hmVal(r);
+                          const t=hmStats.max===hmStats.min?0.5:(v-hmStats.min)/(hmStats.max-hmStats.min);
+                          const isSel=selU?.id===r.id;
+                          const tip=`${r.nome} · ${r.area}m² · ${VISTAS.find(v=>v.key===r.vista)?.short} · DY ${pct(r.y)} · Res ${brl(Math.round(r.res))}/mês · ADR ${brl(r.adr)}`;
+                          return (
+                            <div key={r.id}
+                              className={`hm-cell${isSel?" sel":""}`}
+                              style={{background:hmColor(t),height:maxU>20?18:28,minWidth:maxU>20?8:14,borderRadius:maxU>20?3:5}}
+                              onClick={()=>setSelId(r.id)}
+                              title={tip}/>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{display:"flex",gap:10,alignItems:"center",marginTop:16,paddingTop:11,borderTop:"1px solid var(--bg3)",flexWrap:"wrap"}}>
+                <span style={{fontSize:9,color:"var(--text3)",fontWeight:600,whiteSpace:"nowrap",fontFamily:"'Space Mono',monospace"}}>
+                  {hmM==='y'?pct(hmStats.min):brl(Math.round(hmStats.min))}
+                </span>
+                <div style={{height:7,flex:1,minWidth:120,maxWidth:280,borderRadius:4,background:`linear-gradient(90deg,${HMPAL.join(",")})`}}/>
+                <span style={{fontSize:9,color:"var(--text3)",fontWeight:600,whiteSpace:"nowrap",fontFamily:"'Space Mono',monospace"}}>
+                  {hmM==='y'?pct(hmStats.max):brl(Math.round(hmStats.max))}
+                </span>
+                <span style={{fontSize:9,color:"var(--text3)",marginLeft:"auto",fontFamily:"'Space Mono',monospace",fontWeight:600}}>
+                  {results.length} UHs · {byFloor.length} andar{byFloor.length>1?"es":""} · prob méd DY&gt;12%: <b style={{color:"var(--green)"}}>{pct(avgProb12)}</b>
+                </span>
+              </div>
+            </div>
+
+            {selU&&<UnitPanel r={selU} mc={mcData[selU.id]} proj={proj} hasL={hasL}/>}
+          </div>
+
+          {/* DISTRIBUIÇÃO MONTE CARLO */}
+          <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,padding:15,marginBottom:13}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:13,flexWrap:"wrap",gap:10}}>
+              <div>
+                <div style={{fontSize:9,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"var(--text2)"}}>
+                  Distribuição do Yield · Monte Carlo
+                </div>
+                <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>
+                  Faixa P10–P90 de cada UH · {NMC.toLocaleString('pt-BR')} cenários · mediana em linha preta
+                </div>
+              </div>
+              <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Space Mono',monospace",fontWeight:600}}>
+                σ ADR 7% · σ OCC 5pp · σ OTA 1.5pp
+              </div>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"110px 1fr 60px",gap:10,fontSize:9,color:"var(--text3)",fontWeight:700,paddingBottom:7,borderBottom:"1px solid var(--bg3)",textTransform:"uppercase",letterSpacing:.5}}>
+              <span>UH</span>
+              <span>Faixa 8%..18% a.a.</span>
+              <span style={{textAlign:"right"}}>P50</span>
+            </div>
+            <div style={{marginTop:6}}>
+              {results.map(r=>{
+                const m=mcData[r.id];
+                if(!m)return null;
+                const mn=8,mx=18;
+                const left=Math.max(0,Math.min(100,((m.nat.p10-mn)/(mx-mn))*100));
+                const right=Math.max(0,Math.min(100,((m.nat.p90-mn)/(mx-mn))*100));
+                const mid=Math.max(0,Math.min(100,((m.nat.p50-mn)/(mx-mn))*100));
+                const isSel=selU?.id===r.id;
+                return (
+                  <div key={r.id} className={`dist-row${isSel?" sel":""}`} onClick={()=>setSelId(r.id)}>
+                    <span style={{color:isSel?"var(--acc)":"var(--text2)",fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",paddingLeft:8}}>{r.nome}</span>
+                    <div style={{position:"relative",height:10,background:"var(--bg3)",borderRadius:5}}>
+                      <div style={{position:"absolute",left:`${left}%`,width:`${Math.max(1.5,right-left)}%`,top:0,bottom:0,borderRadius:5,background:`linear-gradient(90deg,${hmColor((m.nat.p10-mn)/(mx-mn))},${hmColor((m.nat.p90-mn)/(mx-mn))})`}}/>
+                      <div style={{position:"absolute",left:`${mid}%`,top:-2,bottom:-2,width:2,background:"var(--acc)"}}/>
+                      {/* marker 12% threshold */}
+                      <div style={{position:"absolute",left:`${((12-mn)/(mx-mn))*100}%`,top:-4,bottom:-4,width:1,borderLeft:"1px dashed var(--text3)",opacity:.4}}/>
+                    </div>
+                    <span style={{fontFamily:"'Space Mono',monospace",fontWeight:700,textAlign:"right",paddingRight:8,color:m.nat.p50>=12?"var(--green)":"var(--amber)"}}>{pct(m.nat.p50)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"var(--text3)",marginTop:7,fontFamily:"'Space Mono',monospace",paddingLeft:118,paddingRight:68,fontWeight:600}}>
+              <span>8%</span><span style={{color:"var(--text2)"}}>12% meta</span><span>18%</span>
+            </div>
           </div>
 
           {/* RANKING */}
@@ -600,6 +816,65 @@ function App(){
 
         </div>
       )}
+
+      {/* ═══ IMPORT MODAL ═══ */}
+      {showImp&&(
+        <div onClick={()=>{if(!impBusy)setShowImp(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,maxWidth:640,width:"100%",maxHeight:"88vh",overflowY:"auto",padding:26,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
+              <div>
+                <h2 style={{fontSize:20,fontWeight:700,letterSpacing:-.3}}>Importar planta</h2>
+                <p style={{fontSize:12,color:"var(--text2)",marginTop:4,lineHeight:1.5}}>Quadro de áreas (Decreto 16721/98 RJ) — PDF, texto colado ou exemplo pré-carregado. O parser extrai ID, área útil e pavimento automaticamente.</p>
+              </div>
+              <button onClick={()=>!impBusy&&setShowImp(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--text3)",padding:0,lineHeight:1}}>×</button>
+            </div>
+
+            {/* PDF upload */}
+            <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:14,marginBottom:10}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--text2)",marginBottom:8}}>① Upload do PDF</div>
+              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <label className="btn btn-p" style={{cursor:"pointer",fontSize:12,padding:"8px 16px"}}>
+                  Escolher arquivo PDF
+                  <input type="file" accept="application/pdf" style={{display:"none"}} disabled={impBusy} onChange={e=>{const f=e.target.files?.[0];if(f)handlePdf(f);}}/>
+                </label>
+                <span style={{fontSize:11,color:"var(--text3)",lineHeight:1.4}}>Extrai texto com PDF.js no navegador. Nenhum dado sai da sua máquina.</span>
+              </div>
+            </div>
+
+            {/* Preset */}
+            <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:14,marginBottom:10}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--text2)",marginBottom:8}}>② Exemplo pré-carregado</div>
+              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <button className="btn" onClick={loadPreset} disabled={impBusy} style={{fontSize:12}}>Carregar Patrimar Nilo Peçanha · 624 UHs</button>
+                <span style={{fontSize:11,color:"var(--text3)",lineHeight:1.4}}>21 pavs · Centro RJ · áreas 18–36m² · extraído do Anexo III do projeto.</span>
+              </div>
+            </div>
+
+            {/* Paste text */}
+            <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:12,padding:14,marginBottom:12}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--text2)",marginBottom:8}}>③ Colar texto da tabela</div>
+              <textarea value={impTxt} onChange={e=>setImpTxt(e.target.value)} placeholder={"Cole aqui o texto da tabela do PDF. Formatos reconhecidos:\n\n201 26,66 2,93 5,23 1 34,82 m² 23,02 m²\n301 AO 2001 26,66 2,93 - 18 532,62 m² 414,36 m²\nUNID. 2101 26,66 2,93 - 1 29,59 m² 23,02 m²"}
+                rows={6} style={{width:"100%",fontFamily:"'Space Mono',monospace",fontSize:11,padding:10,borderRadius:8,resize:"vertical"}} disabled={impBusy}/>
+              <div style={{marginTop:9,display:"flex",justifyContent:"flex-end"}}>
+                <button className="btn btn-p" onClick={handleText} disabled={impBusy||!impTxt.trim()} style={{fontSize:12}}>Analisar texto</button>
+              </div>
+            </div>
+
+            {impMsg&&(
+              <div style={{padding:"10px 13px",borderRadius:10,fontSize:12,fontWeight:600,
+                background:impMsg.startsWith("✓")?"var(--gbg)":impMsg.startsWith("Erro")?"var(--rbg)":"var(--bbg)",
+                border:`1px solid ${impMsg.startsWith("✓")?"var(--gb)":impMsg.startsWith("Erro")?"var(--rb)":"var(--bb)"}`,
+                color:impMsg.startsWith("✓")?"var(--green)":impMsg.startsWith("Erro")?"var(--red)":"var(--blue)"}}>
+                {impMsg}
+              </div>
+            )}
+
+            <div style={{marginTop:13,fontSize:10,color:"var(--text3)",lineHeight:1.6}}>
+              Após importar, as UHs entram na Step 2 com <b>vista "sem vista"</b> e <b>tipologia "studio"</b> por padrão. Ajuste individualmente se necessário.
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -609,6 +884,127 @@ function F({l,children}){
     <div className="fg">
       <label>{l}</label>
       {children}
+    </div>
+  );
+}
+
+function UnitPanel({r,mc,proj,hasL}){
+  if(!mc) return null;
+  const cn=yc(r.y);
+  const {resL,yL}=calcL(r,proj);
+  const cl=yc(yL);
+  const delt=yL-r.y;
+  const otaVal=r.recB-r.recL;
+  const feeVal=r.ni-r.res;
+  const dre=[
+    ["Receita bruta",r.recB,"var(--text)",false],
+    ["(−) OTA 16,5%",-otaVal,"var(--red)",false],
+    ["(=) Rec. líq.",r.recL,"var(--text)",false],
+    ["(−) Condomínio",-proj.cond,"var(--red)",false],
+    ["(−) Energia/Água",-proj.energia,"var(--red)",false],
+    ["(−) IPTU",-proj.iptu,"var(--red)",false],
+    ["(=) NI",r.ni,"var(--text)",false],
+    ["(−) Taxa Lobie 12%",-feeVal,"var(--red)",false],
+    ["= Resultado líq.",r.res,"var(--green)",true]
+  ];
+  const vista=VISTAS.find(v=>v.key===r.vista);
+  const tipo=TIPOS.find(t=>t.key===r.tipo);
+  return (
+    <div className="uh-panel">
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",paddingBottom:13,borderBottom:"1px solid var(--bg3)",marginBottom:13,gap:9}}>
+        <div>
+          <div style={{fontSize:18,fontWeight:700,letterSpacing:-.3,lineHeight:1.1}}>{r.nome}</div>
+          <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.7,marginTop:5,fontWeight:600,lineHeight:1.5}}>
+            {tipo?.label} · Pav. {r.andar} · {vista?.label}
+          </div>
+        </div>
+        <span className={`badge ${cn.cls}`} style={{fontFamily:"'Space Mono',monospace",fontSize:11,padding:"4px 10px",whiteSpace:"nowrap"}}>DY {pct(r.y)}</span>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 10px",fontSize:10,marginBottom:13}}>
+        <span style={{color:"var(--text3)"}}>Área útil</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{r.area}m²</span>
+        <span style={{color:"var(--text3)"}}>SM</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600,color:r.SM>0.8?"var(--green)":r.SM>0.65?"var(--amber)":"var(--red)"}}>{r.SM.toFixed(3)}</span>
+        <span style={{color:"var(--text3)"}}>ADR estimado</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(r.adr)}</span>
+        <span style={{color:"var(--text3)"}}>Ocupação</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{pct(r.occ*100)}</span>
+        <span style={{color:"var(--text3)"}}>Preço tabela</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(r.preco)}</span>
+        <span style={{color:"var(--text3)"}}>R$/m²</span><span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(r.preco/r.area))}</span>
+      </div>
+
+      <div style={{fontSize:9,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:6}}>DRE mensal</div>
+      <table style={{width:"100%",fontSize:11,borderCollapse:"collapse",marginBottom:6}}>
+        <tbody>
+          {dre.map(([l,v,c,hi],i)=>(
+            <tr key={i}>
+              <td style={{padding:"4px 0",color:hi?"var(--green)":"var(--text2)",fontWeight:hi?700:400,borderTop:hi?"1px solid var(--border)":"none",fontSize:hi?11:10}}>{l}</td>
+              <td style={{padding:"4px 0",textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:hi?700:500,color:c,borderTop:hi?"1px solid var(--border)":"none",fontSize:hi?12:11}}>
+                {brl(Math.round(v))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* MC INTERVAL */}
+      <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--bg3)"}}>
+        <div style={{fontSize:9,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.8,marginBottom:10}}>
+          Monte Carlo · {NMC.toLocaleString('pt-BR')} cenários
+        </div>
+        {(()=>{const rng=15,o=5;
+          const l=Math.max(0,Math.min(100,((mc.nat.p10-o)/rng)*100));
+          const r2=Math.max(2,Math.min(100,((mc.nat.p90-mc.nat.p10)/rng)*100));
+          const mid=Math.max(0,Math.min(100,((mc.nat.p50-o)/rng)*100));
+          const thr=Math.max(0,Math.min(100,((12-o)/rng)*100));
+          return (
+            <div style={{position:"relative",height:9,background:"var(--bg3)",borderRadius:5,marginBottom:5}}>
+              <div style={{position:"absolute",left:`${l}%`,width:`${r2}%`,top:0,bottom:0,borderRadius:5,background:`linear-gradient(90deg,${hmColor((mc.nat.p10-o)/rng)},${hmColor((mc.nat.p90-o)/rng)})`}}/>
+              <div style={{position:"absolute",left:`${mid}%`,top:-3,bottom:-3,width:2,background:"var(--acc)"}}/>
+              <div style={{position:"absolute",left:`${thr}%`,top:-4,bottom:-4,width:1,borderLeft:"1px dashed var(--text3)",opacity:.6}}/>
+            </div>
+          );
+        })()}
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:9,fontFamily:"'Space Mono',monospace"}}>
+          <span style={{color:"var(--text3)"}}>P10 <b>{pct(mc.nat.p10)}</b></span>
+          <b style={{color:"var(--acc)"}}>P50 {pct(mc.nat.p50)}</b>
+          <span style={{color:"var(--text3)"}}>P90 <b>{pct(mc.nat.p90)}</b></span>
+        </div>
+        <div style={{marginTop:10,padding:"9px 12px",background:mc.nat.prob12>=50?"var(--gbg)":"var(--abg)",border:`1px solid ${mc.nat.prob12>=50?"var(--gb)":"var(--ab)"}`,borderRadius:9,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+          <span style={{fontSize:10,color:"var(--text2)",fontWeight:600}}>Prob. DY &gt; 12% a.a.</span>
+          <b style={{fontFamily:"'Space Mono',monospace",fontSize:16,color:mc.nat.prob12>=50?"var(--green)":"var(--amber)"}}>{pct(mc.nat.prob12)}</b>
+        </div>
+        <div style={{marginTop:8,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:7,padding:"7px 9px"}}>
+            <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Res. P10</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,marginTop:2}}>{brl(Math.round(mc.nat.p10r))}</div>
+          </div>
+          <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:7,padding:"7px 9px"}}>
+            <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Res. P90</div>
+            <div style={{fontFamily:"'Space Mono',monospace",fontSize:11,fontWeight:700,marginTop:2}}>{brl(Math.round(mc.nat.p90r))}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* LOBIE */}
+      {hasL&&mc.lb&&(
+        <div style={{marginTop:13,paddingTop:12,borderTop:"1px solid var(--bg3)"}}>
+          <div style={{fontSize:9,fontWeight:700,color:"var(--acc)",textTransform:"uppercase",letterSpacing:.8,marginBottom:9}}>
+            Cenário Lobie · gestão
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px 10px",fontSize:10}}>
+            <span style={{color:"var(--text3)"}}>ADR / OCC</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(proj.adrLobie)} · {pct(proj.occLobie)}</span>
+            <span style={{color:"var(--text3)"}}>Resultado/mês</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:cl.tc}}>{brl(Math.round(resL))}</span>
+            <span style={{color:"var(--text3)"}}>Yield anual</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:cl.tc}}>{pct(yL)}</span>
+            <span style={{color:"var(--text3)"}}>Prob. &gt;12%</span>
+            <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:mc.lb.prob12>=50?"var(--green)":"var(--amber)"}}>{pct(mc.lb.prob12)}</span>
+          </div>
+          <div style={{marginTop:9,padding:"8px 10px",background:delt>=0?"var(--gbg)":"var(--rbg)",border:`1px solid ${delt>=0?"var(--gb)":"var(--rb)"}`,borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+            <span style={{fontSize:10,color:"var(--text2)",fontWeight:600}}>Valor da gestão Lobie</span>
+            <b style={{fontFamily:"'Space Mono',monospace",fontSize:14,color:delt>=0?"var(--green)":"var(--red)"}}>{delt>=0?"+":""}{pct(delt)}</b>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
