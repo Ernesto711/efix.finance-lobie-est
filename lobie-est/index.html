@@ -189,45 +189,93 @@ function calcL(r,proj,adrLUnit){
   return{resL,yL,recBL,recLL,niL,adrL};
 }
 
-/* ═══ CENÁRIO DE SAÍDA · IRR / MIRR ═══════════════════════════════
-   DY operacional + valorização anual do m² → TIR considerando fluxo
-   mensal de 120 meses + preço de venda em t=120. MIRR usa a própria
-   TIR como taxa de reinvestimento (regra prática para real estate). */
+/* ═══ CENÁRIO DE SAÍDA COM FINANCIAMENTO (estilo Lobie DCF) ══════════
+   Estrutura: ATO (signing) + pagamentos durante obras (mensal) + CHAVES
+   (balloon na entrega) + saldo financiado (Tabela Price, CET anual).
+   Fluxos mensais na equity do investidor; TIR IRR + TIR-M via reinvest. */
 const EXIT_ANOS=10;
 function irr(cfs,guess){
-  let r=guess||0.15;
-  for(let i=0;i<80;i++){
+  let r=guess||0.01;
+  for(let i=0;i<100;i++){
     let npv=0,d=0;
     for(let t=0;t<cfs.length;t++){
       const v=cfs[t],disc=Math.pow(1+r,t);
       npv+=v/disc;
       if(t>0)d-=t*v/(disc*(1+r));
     }
-    if(Math.abs(npv)<1e-4)return r;
-    if(Math.abs(d)<1e-12)break;
+    if(Math.abs(npv)<1e-3)return r;
+    if(Math.abs(d)<1e-14)break;
     const step=npv/d;
     r=r-step;
-    if(r<-0.98)r=-0.5;if(r>5)r=0.8;
+    if(r<-0.95)r=-0.5;if(r>3)r=0.5;
   }
   return r;
 }
-function exitScn(r,resMonthly,apprPct){
-  const appr=(apprPct||0)/100,months=EXIT_ANOS*12;
-  const exitPrice=r.preco*Math.pow(1+appr,EXIT_ANOS);
-  // Monthly cash flows: t=0 -preco; t=1..120 resMonthly; at t=120 add exitPrice
-  const cfs=new Array(months+1).fill(resMonthly);
-  cfs[0]=-r.preco;
-  cfs[months]+=exitPrice;
+function exitScn(r,resMonthly,apprPct,reinvPct,fin){
+  const appr=(apprPct||0)/100,months=EXIT_ANOS*12,preco=r.preco;
+  const exitPrice=preco*Math.pow(1+appr,EXIT_ANOS);
+  const ato=Math.max(0,(fin?.ato||0)/100);
+  const obras=Math.max(0,(fin?.obras||0)/100);
+  const chaves=Math.max(0,(fin?.chaves||0)/100);
+  const prazoObras=Math.min(months,Math.max(0,fin?.prazoObras||0));
+  const financiado=Math.max(0,1-ato-obras-chaves);
+  const valAto=preco*ato,valObrasTot=preco*obras,valChaves=preco*chaves,valFin=preco*financiado;
+  const valObrasMensal=prazoObras>0?valObrasTot/prazoObras:0;
+  // PMT Tabela Price
+  const taxaFin=Math.max(0,(fin?.taxaFin||0)/100);
+  const im=taxaFin>0?Math.pow(1+taxaFin,1/12)-1:0;
+  const n=Math.max(12,(fin?.prazoFin||30)*12);
+  let pmt=0;
+  if(valFin>0){
+    if(im>0)pmt=valFin*im*Math.pow(1+im,n)/(Math.pow(1+im,n)-1);
+    else pmt=valFin/n;
+  }
+  // Build equity cash flow per month
+  const cfs=new Array(months+1).fill(0);
+  cfs[0]=-valAto;
+  for(let t=1;t<=prazoObras;t++)cfs[t]-=valObrasMensal;
+  if(prazoObras>0)cfs[prazoObras]-=valChaves;
+  else cfs[0]-=valChaves;
+  // Operations + financing after delivery
+  let balance=valFin;
+  for(let t=prazoObras+1;t<=months;t++){
+    cfs[t]+=resMonthly;
+    const mFin=t-prazoObras;
+    if(mFin<=n&&balance>0.01){
+      cfs[t]-=pmt;
+      const juros=balance*im;
+      const amort=pmt-juros;
+      balance=Math.max(0,balance-amort);
+    }
+  }
+  // Exit at t=months: sale proceeds minus remaining financing balance
+  cfs[months]+=exitPrice-balance;
+  // IRR
   const rm=irr(cfs,0.01);
-  const tirNominal=(Math.pow(1+rm,12)-1)*100;
-  // MIRR simplificado: FV de resMonthly (reinvestido à tirNominal/12) + exitPrice vs -preco inicial
-  const fvOps=resMonthly*((Math.pow(1+rm,months)-1)/rm);
-  const fvTotal=fvOps+exitPrice;
-  const mirrMonthly=Math.pow(fvTotal/r.preco,1/months)-1;
+  const tirNominal=isFinite(rm)?(Math.pow(1+rm,12)-1)*100:0;
+  // MIRR: FV of positive CF at reinvest rate; PV of negative CF at reinvest rate
+  const reinvAnnual=(reinvPct||10)/100;
+  const reinvM=reinvAnnual>0?Math.pow(1+reinvAnnual,1/12)-1:0;
+  let fvPos=0,pvNeg=0;
+  for(let t=0;t<cfs.length;t++){
+    const c=cfs[t];
+    if(c>0)fvPos+=c*Math.pow(1+reinvM,months-t);
+    else if(c<0)pvNeg+=(-c)/Math.pow(1+reinvM,t);
+  }
+  const mirrMonthly=(pvNeg>0&&fvPos>0)?Math.pow(fvPos/pvNeg,1/months)-1:0;
   const tirM=(Math.pow(1+mirrMonthly,12)-1)*100;
-  const valTotalPct=(Math.pow(1+appr,EXIT_ANOS)-1)*100;
-  const retornoTotal=((exitPrice-r.preco)+(resMonthly*months))/r.preco*100;
-  return{exitPrice,valTotalPct,tirNominal,tirM,retornoTotal,apprPct:appr*100,monthsCF:months};
+  // Capital investido total (undiscounted)
+  const capitalInvestido=valAto+valObrasTot+valChaves;
+  const equityMultiple=(valAto+valObrasTot+valChaves)>0?(cfs.slice(1).filter(c=>c>0).reduce((s,c)=>s+c,0)+Math.abs(cfs[0])-capitalInvestido)/capitalInvestido:0;
+  return{
+    exitPrice,valTotalPct:(Math.pow(1+appr,EXIT_ANOS)-1)*100,
+    tirNominal,tirM,
+    apprPct:appr*100,monthsCF:months,reinvPct:reinvAnnual*100,
+    capitalInvestido,valAto,valObrasTot,valObrasMensal,valChaves,valFin,
+    pmt,saldoFim:balance,prazoObras,
+    atoPct:ato*100,obrasPct:obras*100,chavesPct:chaves*100,finPct:financiado*100,
+    prazoFin:(fin?.prazoFin||30),taxaFin:taxaFin*100
+  };
 }
 
 function yc(y){
@@ -241,7 +289,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v3.1 · TIR 10y + hedônico';
+const BUILD_VERSION='v4.0 · DCF financiado';
 
 /* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
    Simulação estocástica por UH: ADR~N(μ,7%σ), OCC~σ=5pp, OTA~N(16.5%,1.5%)
@@ -323,7 +371,7 @@ const hmColor=t=>{
   return`rgb(${Math.round(a[0]+(b[0]-a[0])*f)},${Math.round(a[1]+(b[1]-a[1])*f)},${Math.round(a[2]+(b[2]-a[2])*f)})`;
 };
 
-const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,precoM2:22000,cond:800,energia:380,iptu:280,adrLobie:750,occLobie:85,diMult:1.0,apprRate:3.0};
+const P0={nome:"Pirajá 640",endereco:"Rua Visconde de Pirajá, 640",bairro:"Humaitá",distPraia:1200,precoM2:22000,cond:800,energia:380,iptu:280,adrLobie:750,occLobie:85,diMult:1.0,apprRate:3.0,reinvRate:10.0,ato:10,obras:30,chaves:20,prazoObras:36,prazoFin:30,taxaFin:10.0};
 const U0=[
   {id:1,nome:"Std 01",area:40.39,andar:2,vista:"sem_vista",tipo:"studio"},
   {id:2,nome:"Std 02",area:36.03,andar:2,vista:"sem_vista",tipo:"studio"},
@@ -526,25 +574,60 @@ function App(){
                   </div>
                 </div>
                 <div className="card" style={{borderTop:"2px solid var(--warn)"}}>
-                  <div className="ctitle">Cenário de saída · horizonte 10 anos</div>
-                  <p style={{fontSize:11,color:"var(--text2)",marginBottom:10,lineHeight:1.6}}>
-                    Valorização anual do m² usada para compor o <b>preço de saída</b> em t=10y e calcular <b>TIR nominal</b> e <b>TIR-M</b> sobre o fluxo mensal. Benchmarks Patrimar: pessimista 1.5% · base 3.0% · otimista 4.5% a.a.
+                  <div className="ctitle">Estrutura de pagamento &amp; financiamento</div>
+                  <p style={{fontSize:11,color:"var(--text2)",marginBottom:9,lineHeight:1.55}}>
+                    Ato + Obras (mensal) + Chaves (balloon) + saldo <b>financiado</b> (Tabela Price, CET anual). Financiamento = 100% − ato − obras − chaves.
                   </p>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <div style={{flex:"1 1 140px"}}>
-                      <F l="Valorização m² anual (%)"><input type="number" step=".1" min="0" max="20" value={proj.apprRate} onChange={e=>upP('apprRate',e.target.value)}/></F>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                    <F l="% Ato (signing)"><input type="number" step=".1" min="0" max="100" value={proj.ato} onChange={e=>upP('ato',e.target.value)}/></F>
+                    <F l="% Obras (mensal)"><input type="number" step=".1" min="0" max="100" value={proj.obras} onChange={e=>upP('obras',e.target.value)}/></F>
+                    <F l="% Chaves (balloon)"><input type="number" step=".1" min="0" max="100" value={proj.chaves} onChange={e=>upP('chaves',e.target.value)}/></F>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginTop:8}}>
+                    <F l="Prazo obras (meses)"><input type="number" min="0" max="120" value={proj.prazoObras} onChange={e=>upP('prazoObras',e.target.value)}/></F>
+                    <F l="Prazo financ. (anos)"><input type="number" min="5" max="35" value={proj.prazoFin} onChange={e=>upP('prazoFin',e.target.value)}/></F>
+                    <F l="Taxa financ. CET (%a.a.)"><input type="number" step=".1" min="0" max="25" value={proj.taxaFin} onChange={e=>upP('taxaFin',e.target.value)}/></F>
+                  </div>
+                  {(()=>{const fin=100-(+proj.ato||0)-(+proj.obras||0)-(+proj.chaves||0);const inv=(fin<0);return (
+                    <div style={{marginTop:9,padding:"9px 11px",background:inv?"var(--rbg)":"var(--bg2)",border:`1px solid ${inv?"var(--rb)":"var(--border)"}`,borderRadius:8,display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,fontSize:10}}>
+                      <div><div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Ato</div><b style={{fontFamily:"'Space Mono',monospace"}}>{(+proj.ato||0).toFixed(1)}%</b></div>
+                      <div><div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Obras</div><b style={{fontFamily:"'Space Mono',monospace"}}>{(+proj.obras||0).toFixed(1)}%</b></div>
+                      <div><div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Chaves</div><b style={{fontFamily:"'Space Mono',monospace"}}>{(+proj.chaves||0).toFixed(1)}%</b></div>
+                      <div><div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Financ.</div><b style={{fontFamily:"'Space Mono',monospace",color:inv?"var(--red)":"var(--acc)"}}>{fin.toFixed(1)}%</b></div>
                     </div>
-                    <div style={{display:"flex",gap:4,alignItems:"flex-end",paddingBottom:2}}>
-                      {[1.5,3.0,4.5].map(v=>(
-                        <button key={v} type="button" onClick={()=>upP('apprRate',v)}
-                          style={{fontSize:10,padding:"5px 9px",border:"1px solid var(--border)",borderRadius:6,background:Math.abs((proj.apprRate||0)-v)<0.01?"var(--warn)":"var(--bg2)",color:Math.abs((proj.apprRate||0)-v)<0.01?"#fff":"var(--text2)",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700}}>
-                          {v.toFixed(1)}%
-                        </button>
-                      ))}
+                  );})()}
+                </div>
+                <div className="card" style={{borderTop:"2px solid var(--warn)"}}>
+                  <div className="ctitle">Saída 10y · valorização &amp; reinvestimento</div>
+                  <p style={{fontSize:11,color:"var(--text2)",marginBottom:9,lineHeight:1.55}}>
+                    <b>Valorização anual m²</b> compõe o preço de saída. <b>Reinvestimento</b> (TIR-M) = rentabilidade do caixa mensal fora do projeto (Selic/CDI ≈ 10%).
+                  </p>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,alignItems:"end"}}>
+                    <div>
+                      <F l="Valorização m² anual (%)"><input type="number" step=".1" min="0" max="20" value={proj.apprRate} onChange={e=>upP('apprRate',e.target.value)}/></F>
+                      <div style={{display:"flex",gap:3,marginTop:5}}>
+                        {[1.5,3.0,4.5].map(v=>(
+                          <button key={v} type="button" onClick={()=>upP('apprRate',v)}
+                            style={{flex:1,fontSize:10,padding:"4px 6px",border:"1px solid var(--border)",borderRadius:6,background:Math.abs((proj.apprRate||0)-v)<0.01?"var(--warn)":"var(--bg2)",color:Math.abs((proj.apprRate||0)-v)<0.01?"#fff":"var(--text2)",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700}}>
+                            {v.toFixed(1)}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <F l="Reinvest. TIR-M (%/a.a.)"><input type="number" step=".1" min="0" max="30" value={proj.reinvRate} onChange={e=>upP('reinvRate',e.target.value)}/></F>
+                      <div style={{display:"flex",gap:3,marginTop:5}}>
+                        {[8,10,13].map(v=>(
+                          <button key={v} type="button" onClick={()=>upP('reinvRate',v)}
+                            style={{flex:1,fontSize:10,padding:"4px 6px",border:"1px solid var(--border)",borderRadius:6,background:Math.abs((proj.reinvRate||0)-v)<0.01?"var(--blue)":"var(--bg2)",color:Math.abs((proj.reinvRate||0)-v)<0.01?"#fff":"var(--text2)",cursor:"pointer",fontFamily:"'Space Mono',monospace",fontWeight:700}}>
+                            {v}%
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <div style={{marginTop:8,fontSize:10,color:"var(--text3)",fontFamily:"'Space Mono',monospace",lineHeight:1.5}}>
-                    Val. acumulada 10y: <b style={{color:"var(--warn)"}}>+{((Math.pow(1+(proj.apprRate||0)/100,10)-1)*100).toFixed(1)}%</b>
+                    Val. acum. 10y: <b style={{color:"var(--warn)"}}>+{((Math.pow(1+(proj.apprRate||0)/100,10)-1)*100).toFixed(1)}%</b> · Reinv: <b style={{color:"var(--blue)"}}>{(proj.reinvRate||0).toFixed(1)}% a.a.</b>
                   </div>
                 </div>
                 <div style={{background:"var(--gbg)",border:"1px solid var(--gb)",borderRadius:14,padding:"13px 16px"}}>
@@ -1211,35 +1294,59 @@ function UnitPanel({rNat,mc,proj,hasL,scn,adrLUnit}){
         </div>
       </div>
 
-      {/* CENÁRIO DE SAÍDA · 10Y */}
+      {/* CENÁRIO DE SAÍDA FINANCIADO · 10Y */}
       {proj.apprRate>=0&&A.res>0&&(()=>{
-        const ex=exitScn(rNat,A.res,proj.apprRate||0);
+        const finOpts={ato:proj.ato,obras:proj.obras,chaves:proj.chaves,prazoObras:proj.prazoObras,prazoFin:proj.prazoFin,taxaFin:proj.taxaFin};
+        const ex=exitScn(rNat,A.res,proj.apprRate||0,proj.reinvRate||10,finOpts);
+        const mesesOps=Math.max(0,ex.monthsCF-ex.prazoObras);
+        const rendaBruta=A.res*mesesOps;
         return (
           <div style={{marginTop:13,paddingTop:12,borderTop:"1px solid var(--bg3)"}}>
-            <div style={{fontSize:9,fontWeight:700,color:"var(--warn)",textTransform:"uppercase",letterSpacing:.8,marginBottom:9,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
-              <span>Cenário de saída · {EXIT_ANOS}y</span>
-              <span style={{fontSize:9,fontFamily:"'Space Mono',monospace",color:"var(--text3)",fontWeight:600}}>{ex.apprPct.toFixed(1)}% a.a.</span>
+            <div style={{fontSize:9,fontWeight:700,color:"var(--warn)",textTransform:"uppercase",letterSpacing:.8,marginBottom:9,display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8,flexWrap:"wrap"}}>
+              <span>Cenário de saída · {EXIT_ANOS}y financiado</span>
+              <span style={{fontSize:9,fontFamily:"'Space Mono',monospace",color:"var(--text3)",fontWeight:600}}>val {ex.apprPct.toFixed(1)}% · reinv {ex.reinvPct.toFixed(1)}%</span>
             </div>
+
+            {/* Estrutura de pagamento */}
+            <div style={{marginBottom:9,padding:"8px 10px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8}}>
+              <div style={{fontSize:8,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,marginBottom:5}}>Estrutura de capital</div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"3px 10px",fontSize:10}}>
+                <span style={{color:"var(--text3)"}}>Ato ({ex.atoPct.toFixed(0)}%)</span>
+                <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(ex.valAto))}</span>
+                <span style={{color:"var(--text3)"}}>Obras ({ex.obrasPct.toFixed(0)}% · {ex.prazoObras}m)</span>
+                <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(ex.valObrasMensal))}/mês</span>
+                <span style={{color:"var(--text3)"}}>Chaves ({ex.chavesPct.toFixed(0)}%)</span>
+                <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(ex.valChaves))}</span>
+                <span style={{color:"var(--text3)"}}>Financiado ({ex.finPct.toFixed(0)}% · {ex.prazoFin}y @ {ex.taxaFin.toFixed(1)}%)</span>
+                <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:"var(--acc)"}}>PMT {brl(Math.round(ex.pmt))}</span>
+                <span style={{color:"var(--text3)",borderTop:"1px solid var(--bg3)",paddingTop:3,marginTop:2}}>Capital próprio total</span>
+                <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,borderTop:"1px solid var(--bg3)",paddingTop:3,marginTop:2}}>{brl(Math.round(ex.capitalInvestido))}</span>
+              </div>
+            </div>
+
+            {/* Saída */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"7px 10px",fontSize:10,marginBottom:9}}>
-              <span style={{color:"var(--text3)"}}>Preço aquisição</span>
-              <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(rNat.preco))}</span>
-              <span style={{color:"var(--text3)"}}>Preço saída est.</span>
+              <span style={{color:"var(--text3)"}}>Preço de saída est.</span>
               <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:"var(--warn)"}}>{brl(Math.round(ex.exitPrice))}</span>
-              <span style={{color:"var(--text3)"}}>Valorização acum.</span>
-              <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:"var(--warn)"}}>+{ex.valTotalPct.toFixed(1)}%</span>
-              <span style={{color:"var(--text3)"}}>Renda 10y (nom.)</span>
-              <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(A.res*ex.monthsCF))}</span>
+              <span style={{color:"var(--text3)"}}>Saldo devedor fim</span>
+              <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600,color:"var(--red)"}}>−{brl(Math.round(ex.saldoFim))}</span>
+              <span style={{color:"var(--text3)"}}>Líquido da venda</span>
+              <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:"var(--green)"}}>{brl(Math.round(ex.exitPrice-ex.saldoFim))}</span>
+              <span style={{color:"var(--text3)"}}>Renda ops ({mesesOps}m)</span>
+              <span style={{textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:600}}>{brl(Math.round(rendaBruta))}</span>
             </div>
+
+            {/* TIR / TIR-M */}
             <div style={{padding:"10px 12px",background:"#fff7ed",border:"1px solid #fed7aa",borderRadius:9,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div>
                 <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>TIR nominal</div>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:18,fontWeight:700,color:"var(--warn)",lineHeight:1}}>{ex.tirNominal.toFixed(1)}%</div>
-                <div style={{fontSize:9,color:"var(--text3)",marginTop:3}}>a.a. c/ ganho capital</div>
+                <div style={{fontFamily:"'Space Mono',monospace",fontSize:18,fontWeight:700,color:"var(--warn)",lineHeight:1}}>{isFinite(ex.tirNominal)?ex.tirNominal.toFixed(1):"—"}%</div>
+                <div style={{fontSize:9,color:"var(--text3)",marginTop:3}}>a.a. IRR sobre equity</div>
               </div>
               <div>
                 <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>TIR-M</div>
-                <div style={{fontFamily:"'Space Mono',monospace",fontSize:18,fontWeight:700,color:"var(--warn)",lineHeight:1}}>{ex.tirM.toFixed(1)}%</div>
-                <div style={{fontSize:9,color:"var(--text3)",marginTop:3}}>a.a. modificada</div>
+                <div style={{fontFamily:"'Space Mono',monospace",fontSize:18,fontWeight:700,color:"var(--blue)",lineHeight:1}}>{isFinite(ex.tirM)?ex.tirM.toFixed(1):"—"}%</div>
+                <div style={{fontSize:9,color:"var(--text3)",marginTop:3}}>reinv. @ {ex.reinvPct.toFixed(1)}%</div>
               </div>
             </div>
           </div>
