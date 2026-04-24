@@ -289,7 +289,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v4.0 · DCF financiado';
+const BUILD_VERSION='v4.1 · ATP total + 2QS';
 
 /* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
    Simulação estocástica por UH: ADR~N(μ,7%σ), OCC~σ=5pp, OTA~N(16.5%,1.5%)
@@ -317,28 +317,38 @@ function mc(r,proj,bd,adrL,occL){
 }
 /* ═══ PARSER DO QUADRO DE ÁREAS (Decreto 16721/98 RJ) ══════════════
    3 padrões: UH direta (pav 2), range "301 AO 2001" (pav 3-20 × 18),
-   cobertura "UNID. 2101" (pav 21). Extrai ID, área útil, pavimento. */
+   cobertura "UNID. 2101" (pav 21). Extrai ID, ATP TOTAL (fechada +
+   varanda + terraço descoberto), pavimento, auto-classifica tipo por
+   área: <29m² studio · 29-45m² 1q · ≥45m² 2q (double suite). */
+function classifyTipo(a){return a<29?'studio':a<45?'1q':'2q';}
 function parsePlantaText(text){
   const units=[];let nid=1;
   const nf=s=>parseFloat(String(s).replace(/\./g,'').replace(',','.'));
   const lines=text.split(/\r?\n/);
   for(const raw of lines){
     const l=raw.trim();
-    let m=l.match(/^(\d{3})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+1\s+[\d.,]+\s+m.?\s+([\d,]+)\s*m/);
-    if(m){const uid=m[1],au=nf(m[3]),pav=parseInt(uid[0]);units.push({id:nid++,nome:uid,area:au,andar:pav,vista:'sem_vista',tipo:'studio'});continue;}
-    m=l.match(/^(\d{3})\s+AO\s+(\d{4})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+(\d+)\s+[\d.,]+\s+m.?\s+([\d,]+)\s*m/);
+    // Pav 2 direct: "201 26,66 2,93 5,23 1 34,82 m² 23,02 m²"
+    // groups: id, fechada, varanda, terraço, TOTAL, AU
+    let m=l.match(/^(\d{3})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+1\s+([\d.,]+)\s+m.?\s+[\d,]+\s*m/);
+    if(m){const uid=m[1],atp=nf(m[4]),pav=parseInt(uid[0]);units.push({id:nid++,nome:uid,area:atp,andar:pav,vista:'sem_vista',tipo:classifyTipo(atp)});continue;}
+    // Range pav 3-20: "301 AO 2001 26,66 2,93 - 18 532,62 m² 414,36 m²"
+    // groups: start, end, fechada, varanda, count, TOTAL_all, AU_all
+    m=l.match(/^(\d{3})\s+AO\s+(\d{4})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+(\d+)\s+([\d.,]+)\s+m.?\s+[\d,]+\s*m/);
     if(m){
-      const start=parseInt(m[1]),end=parseInt(m[2]),count=parseInt(m[5]),auTotal=nf(m[6]);
-      const au=Math.round((auTotal/count)*100)/100;
-      const pos=start%100,sf=Math.floor(start/100),ef=Math.floor(end/100);
-      for(let f=sf;f<=ef;f++){
+      const start=parseInt(m[1]),count=parseInt(m[5]),atpTotal=nf(m[6]);
+      const atp=Math.round((atpTotal/count)*100)/100;
+      const pos=start%100,sf=Math.floor(start/100);
+      for(let i=0;i<count;i++){
+        const f=sf+i;
         const uid=f<10?`${f}${String(pos).padStart(2,'0')}`:`${f}${String(pos).padStart(2,'0')}`;
-        units.push({id:nid++,nome:uid,area:au,andar:f,vista:'sem_vista',tipo:'studio'});
+        units.push({id:nid++,nome:uid,area:atp,andar:f,vista:'sem_vista',tipo:classifyTipo(atp)});
       }
       continue;
     }
-    m=l.match(/^UNID\.?\s+(\d{4})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+1\s+[\d.,]+\s+m.?\s+([\d,]+)\s*m/);
-    if(m){const uid=m[1],au=nf(m[4]),pav=parseInt(uid.slice(0,2));units.push({id:nid++,nome:uid,area:au,andar:pav,vista:'sem_vista',tipo:'studio'});}
+    // Cobertura: "UNID. 2101 26,66 2,93 - 1 29,59 m² 23,02 m²"
+    // groups: id, fechada, varanda, TOTAL, AU
+    m=l.match(/^UNID\.?\s+(\d{4})\s+([\d,]+)\s+([\d,]+)\s+[\d,.\-]+\s+1\s+([\d.,]+)\s+m.?\s+[\d,]+\s*m/);
+    if(m){const uid=m[1],atp=nf(m[4]),pav=parseInt(uid.slice(0,2));units.push({id:nid++,nome:uid,area:atp,andar:pav,vista:'sem_vista',tipo:classifyTipo(atp)});}
   }
   return units;
 }
@@ -680,7 +690,7 @@ function App(){
           </div>
 
           <div style={{background:"#fffbeb",border:"1px solid var(--ab)",borderRadius:10,padding:"9px 14px",marginBottom:12,fontSize:11,color:"#92400e",lineHeight:1.6}}>
-            <b>Preço/m² uniforme:</b> o yield compara unidades na mesma base — revela eficiência operacional pura (área, vista, andar, localização), sem distorção pela precificação do incorporador. Alterações de preço por UH pertencem ao incorporador, não ao modelo Lobie.
+            <b>Preço/m² ATP uniforme:</b> área = ATP total (fechada + varanda + terraço descoberto), convenção de tabela do mercado imobiliário Rio. O yield compara UHs na mesma base revelando eficiência operacional pura sem distorção do pricing do incorporador.
           </div>
 
           {units.length>30&&(
@@ -694,7 +704,7 @@ function App(){
           <div style={{background:"#fff",border:"1px solid var(--border)",borderRadius:14,overflow:"hidden"}}>
             <div style={{overflowX:"auto",maxHeight:units.length>30?520:"none",overflowY:units.length>30?"auto":"visible"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}} className="itbl">
-                <thead style={{position:"sticky",top:0,background:"var(--bg2)",zIndex:2}}><tr>{["Nome","Área m²","Andar","Vista","Tipologia","Preço","SM",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
+                <thead style={{position:"sticky",top:0,background:"var(--bg2)",zIndex:2}}><tr>{["Nome","Área ATP m²","Andar","Vista","Tipologia","Preço","SM",""].map(h=><th key={h}>{h}</th>)}</tr></thead>
                 <tbody>
                   {units.filter(u=>!filter||String(u.nome).toLowerCase().includes(filter.toLowerCase())).map(u=>{
                     const{SM}=sm(u,proj.distPraia);
