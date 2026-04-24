@@ -110,7 +110,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.3}
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState,useMemo}=React;
+const {useState,useMemo,useEffect}=React;
 
 /* ═══ MODELO COBB-DOUGLAS — CALIBRADO LOBIE ═══════════════════
    ADR = ADR_ref × DI^α × SM^β
@@ -289,7 +289,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v4.1 · ATP total + 2QS';
+const BUILD_VERSION='v4.2 · share read-only';
 
 /* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
    Simulação estocástica por UH: ADR~N(μ,7%σ), OCC~σ=5pp, OTA~N(16.5%,1.5%)
@@ -397,13 +397,32 @@ const U0=[
 ];
 
 function App(){
-  const[step,setStep]=useState(1);
+  const urlParams=new URLSearchParams(window.location.search);
+  const shareMode=urlParams.has('share')||urlParams.has('view');
+  const shareName=urlParams.get('share')||urlParams.get('view')||'';
+  const[step,setStep]=useState(shareMode?3:1);
   const[proj,setProj]=useState(P0);
   const[units,setUnits]=useState(U0);
   const[nid,setNid]=useState(12);
   const[sb,setSb]=useState("y");
   const[sd,setSd]=useState(-1);
   const[showM,setShowM]=useState(false);
+  const[shareLoaded,setShareLoaded]=useState(false);
+
+  // Auto-load preset when in share mode
+  useEffect(()=>{
+    if(shareMode&&!shareLoaded){
+      const preset=shareName==='nilo'||shareName==='nilo-pecanha'?'./nilo-pecanha.json':`./${shareName}.json`;
+      fetch(preset).then(r=>r.json()).then(d=>{
+        if(d.units&&d.units.length){
+          setUnits(d.units);
+          setNid(Math.max(...d.units.map(u=>u.id))+1);
+          if(d.projeto)setProj(p=>({...p,...d.projeto}));
+          setStep(3);
+        }
+      }).catch(()=>{}).finally(()=>setShareLoaded(true));
+    }
+  },[shareMode,shareName,shareLoaded]);
 
   const bd=BAIRROS[proj.bairro]||BAIRROS["Ipanema"];
   const results=useMemo(()=>units.map(u=>calc(u,proj,bd)),[units,proj,bd]);
@@ -514,28 +533,47 @@ function App(){
     <div>
       {/* TOPBAR */}
       <div className="topbar">
-        <div className="logo">LOBIE <span>Estudo de Rentabilidade</span><span style={{fontSize:9,color:"var(--text3)",marginLeft:8,fontFamily:"'Space Mono',monospace",letterSpacing:0}}>· {BUILD_VERSION}</span></div>
+        <div className="logo">
+          LOBIE <span>Estudo de Rentabilidade</span>
+          <span style={{fontSize:9,color:"var(--text3)",marginLeft:8,fontFamily:"'Space Mono',monospace",letterSpacing:0}}>· {BUILD_VERSION}</span>
+          {shareMode&&<span style={{fontSize:9,color:"#fff",marginLeft:8,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--acc)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Somente leitura</span>}
+        </div>
         <div style={{display:"flex",gap:6}} className="no-print">
+          {step===3&&!shareMode&&(
+            <button className="btn" onClick={()=>{
+              const preset=shareName||'nilo';
+              const url=`${window.location.origin}${window.location.pathname}?share=nilo`;
+              navigator.clipboard?.writeText(url);
+              alert(`Link de visualização copiado:\n\n${url}\n\nEnvie para o cliente — ele verá apenas os resultados (sem poder editar).`);
+            }}>🔗 Compartilhar</button>
+          )}
           {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button></>}
         </div>
       </div>
 
       {/* STEP NAV */}
-      <div className="snav no-print">
-        {[["1","Projeto",1],["2","Unidades",2],["3","Resultados",3]].map(([n,l,s])=>(
-          <div key={s} className={`stab${step===s?" active":step>s?" done":""}`} onClick={()=>step>s&&setStep(s)}>
-            <div className="snum">{step>s?"✓":n}</div>{l}
-          </div>
-        ))}
-        {step===3&&(
-          <div className="snav-info">
-            <span>{proj.nome}</span>·<span>{units.length} UHs</span>·
-            <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b>·
-            <span style={{fontFamily:"'Space Mono',monospace",color:"var(--green)"}}>{pct(avgY)}</span>
-            {hasL&&<>→<b style={{fontFamily:"'Space Mono',monospace",color:"var(--acc)"}}>{pct(avgYL)}</b><span style={{fontFamily:"'Space Mono',monospace",color:delta>=0?"var(--green)":"var(--red)",fontSize:10}}>{delta>=0?" +":""}{pct(delta)}</span></>}
-          </div>
-        )}
-      </div>
+      {!shareMode&&(
+        <div className="snav no-print">
+          {[["1","Projeto",1],["2","Unidades",2],["3","Resultados",3]].map(([n,l,s])=>(
+            <div key={s} className={`stab${step===s?" active":step>s?" done":""}`} onClick={()=>step>s&&setStep(s)}>
+              <div className="snum">{step>s?"✓":n}</div>{l}
+            </div>
+          ))}
+          {step===3&&(
+            <div className="snav-info">
+              <span>{proj.nome}</span>·<span>{units.length} UHs</span>·
+              <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b>·
+              <span style={{fontFamily:"'Space Mono',monospace",color:"var(--green)"}}>{pct(avgY)}</span>
+              {hasL&&<>→<b style={{fontFamily:"'Space Mono',monospace",color:"var(--acc)"}}>{pct(avgYL)}</b><span style={{fontFamily:"'Space Mono',monospace",color:delta>=0?"var(--green)":"var(--red)",fontSize:10}}>{delta>=0?" +":""}{pct(delta)}</span></>}
+            </div>
+          )}
+        </div>
+      )}
+      {shareMode&&(
+        <div className="snav no-print" style={{background:"var(--bg2)",justifyContent:"flex-start",padding:"0 28px",alignItems:"center",fontSize:12,color:"var(--text2)",fontWeight:600}}>
+          <span style={{padding:"10px 0"}}><b>{proj.nome}</b> · {proj.endereco} · {proj.bairro} · {units.length} UHs · VGV <b style={{fontFamily:"'Space Mono',monospace"}}>{brl(vgv)}</b></span>
+        </div>
+      )}
 
       {/* ═══ STEP 1 ═══ */}
       {step===1&&(
@@ -755,7 +793,7 @@ function App(){
             </div>
             <div style={{display:"flex",gap:6}} className="no-print">
               <button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button>
-              <button className="btn" onClick={()=>setStep(2)}>← Editar</button>
+              {!shareMode&&<button className="btn" onClick={()=>setStep(2)}>← Editar</button>}
               <button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button>
             </div>
           </div>
