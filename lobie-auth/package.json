@@ -1,0 +1,21 @@
+{
+  "name": "lobie-auth",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "fastify": "^5.0.0",
+    "@fastify/cors": "^10.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.16",
+    "resend": "^4.0.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

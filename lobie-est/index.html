@@ -291,7 +291,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.1 · login universal';
+const BUILD_VERSION='v5.2 · OAuth ativado';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -313,8 +313,10 @@ async function sha256Hex(s){
    Sugestão: novo Railway service "lobie-auth" rodando Fastify+Resend.
    Set LOBIE_AUTH_BACKEND abaixo após deploy. Enquanto não estiver
    deployado, o tab OAuth mostra "em breve" e usuários usam passkey. */
-const LOBIE_AUTH_BACKEND='https://lobie-auth-production.up.railway.app';
-const LOBIE_AUTH_ENABLED=false;  // true após deploy do backend
+const LOBIE_AUTH_BACKEND=window.location.hostname==='localhost'
+  ? 'http://localhost:3000'
+  : 'https://lobie-auth-production.up.railway.app';
+const LOBIE_AUTH_ENABLED=true;  // backend lobie-auth deployado
 const AUTH_TOKEN_KEY='lobie_auth_session';
 const lobieAuth={
   async sendOTP(email){
