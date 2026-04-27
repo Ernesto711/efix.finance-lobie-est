@@ -289,7 +289,20 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v4.2 · share read-only';
+const BUILD_VERSION='v4.3 · auth gate';
+
+/* ═══ AUTH GATE PARA SHARE MODE ═════════════════════════════════════
+   SHA-256 do password é commitado no source (não a senha plain).
+   Usuário digita senha → hashed → comparado com PWD_HASH. Sessão
+   persistida em localStorage. Para trocar a senha: gerar SHA-256 do
+   novo password e atualizar PWD_HASH abaixo.
+   Senha atual: "lobie-patrimar-2026" */
+const PWD_HASH='3af8fd513d6a0ef0df0c0d7b240af1b614189e5916e5d2bb0a8ce9b618cfcbac';
+async function sha256Hex(s){
+  const buf=new TextEncoder().encode(s);
+  const hash=await crypto.subtle.digest('SHA-256',buf);
+  return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 
 /* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
    Simulação estocástica por UH: ADR~N(μ,7%σ), OCC~σ=5pp, OTA~N(16.5%,1.5%)
@@ -400,6 +413,24 @@ function App(){
   const urlParams=new URLSearchParams(window.location.search);
   const shareMode=urlParams.has('share')||urlParams.has('view');
   const shareName=urlParams.get('share')||urlParams.get('view')||'';
+  const[authed,setAuthed]=useState(()=>{
+    if(!shareMode)return true;
+    return localStorage.getItem('lobie_auth')===PWD_HASH;
+  });
+  const[pwdInput,setPwdInput]=useState('');
+  const[pwdErr,setPwdErr]=useState('');
+  const[pwdBusy,setPwdBusy]=useState(false);
+  const tryAuth=async()=>{
+    if(!pwdInput)return;
+    setPwdBusy(true);setPwdErr('');
+    const h=await sha256Hex(pwdInput);
+    if(h===PWD_HASH){
+      localStorage.setItem('lobie_auth',h);
+      setAuthed(true);setPwdInput('');
+    }else setPwdErr('Senha incorreta. Verifique e tente novamente.');
+    setPwdBusy(false);
+  };
+  const logout=()=>{localStorage.removeItem('lobie_auth');setAuthed(false);};
   const[step,setStep]=useState(shareMode?3:1);
   const[proj,setProj]=useState(P0);
   const[units,setUnits]=useState(U0);
@@ -529,6 +560,37 @@ function App(){
   const upU=(id,f,v)=>setUnits(u=>u.map(x=>x.id===id?{...x,[f]:['nome','vista','tipo'].includes(f)?v:+v}:x));
   const ts=f=>{if(sb===f)setSd(d=>-d);else{setSb(f);setSd(-1);}};
 
+  // Auth gate for share mode
+  if(shareMode&&!authed){
+    return (
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:"var(--bg)"}}>
+        <div style={{maxWidth:420,width:"100%",background:"#fff",borderRadius:16,padding:32,boxShadow:"0 10px 40px rgba(0,0,0,.08)",border:"1px solid var(--border)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+            <div style={{width:34,height:34,borderRadius:8,background:"var(--acc)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:"#fff",fontWeight:700,letterSpacing:1}}>L</div>
+            <div>
+              <div style={{fontSize:15,fontWeight:800,letterSpacing:1.5}}>LOBIE</div>
+              <div style={{fontSize:10,color:"var(--text3)",fontWeight:600,letterSpacing:.5}}>ESTUDO DE RENTABILIDADE</div>
+            </div>
+          </div>
+          <h1 style={{fontSize:21,fontWeight:700,letterSpacing:-.3,marginTop:18,marginBottom:5}}>Acesso restrito</h1>
+          <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:18}}>Este estudo é confidencial. Informe a senha de acesso fornecida pela equipe Lobie para continuar.</p>
+          <form onSubmit={e=>{e.preventDefault();tryAuth();}}>
+            <label style={{display:"block",fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:6}}>Senha</label>
+            <input type="password" value={pwdInput} onChange={e=>{setPwdInput(e.target.value);setPwdErr('');}} autoFocus
+              placeholder="••••••••" style={{width:"100%",padding:"12px 14px",fontSize:14,fontFamily:"'Space Mono',monospace",letterSpacing:1,borderRadius:10,border:`1px solid ${pwdErr?"var(--rb)":"var(--border)"}`,background:pwdErr?"var(--rbg)":"var(--bg3)",outline:"none",transition:"all .15s"}}/>
+            {pwdErr&&<div style={{fontSize:11,color:"var(--red)",marginTop:7,fontWeight:600}}>{pwdErr}</div>}
+            <button type="submit" disabled={pwdBusy||!pwdInput} className="btn btn-p btn-lg" style={{marginTop:14,width:"100%",justifyContent:"center"}}>
+              {pwdBusy?"Verificando...":"Acessar estudo →"}
+            </button>
+          </form>
+          <div style={{marginTop:18,paddingTop:16,borderTop:"1px solid var(--bg3)",fontSize:10,color:"var(--text3)",lineHeight:1.6}}>
+            Sem a senha? Solicite acesso a <b style={{color:"var(--text2)"}}>contato@lobie.com.br</b>. A sessão é gravada localmente neste navegador.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return(
     <div>
       {/* TOPBAR */}
@@ -548,6 +610,7 @@ function App(){
             }}>🔗 Compartilhar</button>
           )}
           {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button></>}
+          {shareMode&&authed&&<button className="btn" onClick={logout} title="Encerrar sessão">⎋ Sair</button>}
         </div>
       </div>
 
