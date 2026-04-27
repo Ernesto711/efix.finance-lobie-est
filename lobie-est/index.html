@@ -291,7 +291,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.2 · OAuth ativado';
+const BUILD_VERSION='v5.3 · passkey-first';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -316,7 +316,9 @@ async function sha256Hex(s){
 const LOBIE_AUTH_BACKEND=window.location.hostname==='localhost'
   ? 'http://localhost:3000'
   : 'https://lobie-auth-production.up.railway.app';
-const LOBIE_AUTH_ENABLED=true;  // backend lobie-auth deployado
+// LOBIE_AUTH_ENABLED: flip pra true após deploy do lobie-auth no Railway.
+// Backend code está em /lobie-auth/ no repo, pronto p/ deploy.
+const LOBIE_AUTH_ENABLED=false;
 const AUTH_TOKEN_KEY='lobie_auth_session';
 const lobieAuth={
   async sendOTP(email){
@@ -486,7 +488,7 @@ function App(){
   // como incorporador, branding switcha para o incorporador.
   const incorp=userIncorp||allIncorp?.['lobie-master']||null;
   const incName=session?.incorpId||'lobie-master';
-  const[authMode,setAuthMode]=useState('oauth');
+  const[authMode,setAuthMode]=useState(LOBIE_AUTH_ENABLED?'oauth':'passkey');
   const[email,setEmail]=useState('');
   const[otpSent,setOtpSent]=useState(false);
   const[otpCode,setOtpCode]=useState('');
@@ -721,12 +723,17 @@ function App(){
 
           {authMode==='oauth'?(
             <form onSubmit={e=>{e.preventDefault();otpSent?verifyOtp():sendOtp();}}>
+              {!LOBIE_AUTH_ENABLED&&(
+                <div style={{padding:"10px 12px",background:"#fffbeb",border:"1px solid #fde68a",borderRadius:9,fontSize:11,color:"#92400e",lineHeight:1.55,marginBottom:14}}>
+                  <b>OAuth em deploy.</b> O backend Lobie auth está pronto mas ainda não foi publicado no Railway. Por enquanto, use a aba <b>🔑 Passkey personalizado</b> ao lado.
+                </div>
+              )}
               {!otpSent?(
                 <>
                   <label style={{display:"block",fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:6}}>Email corporativo</label>
                   <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setAuthErr('');}} autoFocus
-                    placeholder="seu-nome@empresa.com.br" style={{width:"100%",padding:"12px 14px",fontSize:14,borderRadius:10,border:`1px solid ${authErr?"var(--rb)":"var(--border)"}`,background:authErr?"var(--rbg)":"var(--bg3)",outline:"none",transition:"all .15s",fontFamily:"inherit"}}/>
-                  <button type="submit" disabled={authBusy||!email} style={{marginTop:14,width:"100%",padding:"12px",borderRadius:10,border:"none",fontSize:13,fontWeight:700,background:brandColor,color:"#fff",cursor:authBusy||!email?"not-allowed":"pointer",opacity:authBusy||!email?.6:1,fontFamily:"inherit"}}>
+                    placeholder="seu-nome@empresa.com.br" style={{width:"100%",padding:"12px 14px",fontSize:14,borderRadius:10,border:`1px solid ${authErr?"var(--rb)":"var(--border)"}`,background:authErr?"var(--rbg)":"var(--bg3)",outline:"none",transition:"all .15s",fontFamily:"inherit"}} disabled={!LOBIE_AUTH_ENABLED}/>
+                  <button type="submit" disabled={!LOBIE_AUTH_ENABLED||authBusy||!email} style={{marginTop:14,width:"100%",padding:"12px",borderRadius:10,border:"none",fontSize:13,fontWeight:700,background:brandColor,color:"#fff",cursor:!LOBIE_AUTH_ENABLED||authBusy||!email?"not-allowed":"pointer",opacity:!LOBIE_AUTH_ENABLED||authBusy||!email?.6:1,fontFamily:"inherit"}}>
                     {authBusy?"Enviando...":"Enviar código por email →"}
                   </button>
                 </>
