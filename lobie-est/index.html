@@ -669,17 +669,22 @@ function App(){
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:`linear-gradient(135deg, ${brandSoft} 0%, var(--bg) 70%)`}}>
         <div style={{maxWidth:460,width:"100%",background:"#fff",borderRadius:18,padding:34,boxShadow:"0 20px 60px rgba(0,0,0,.10)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:brandColor}}/>
+          {/* Header: Lobie sempre dominante + incorporador secundário (se houver) */}
           <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:8}}>
-            {inc?.logo_url?(
-              <img src={inc.logo_url} alt={inc.name} style={{height:38,maxWidth:160,objectFit:"contain"}}
-                onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex';}}/>
-            ):null}
-            <div style={{width:42,height:42,borderRadius:10,background:brandColor,display:inc?.logo_url?"none":"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:"#fff",fontWeight:800,letterSpacing:1,flexShrink:0}}>{inc?.name?.charAt(0).toUpperCase()||"L"}</div>
-            <div style={{flex:1,minWidth:0}}>
-              {!inc?.logo_url&&<div style={{fontSize:15,fontWeight:800,letterSpacing:.5,lineHeight:1.1}}>{inc?.name||"Lobie"}</div>}
-              <div style={{fontSize:9,color:"var(--text3)",fontWeight:600,letterSpacing:.5,marginTop:inc?.logo_url?0:3,textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inc?.tagline||"Estudo de Rentabilidade"}</div>
-            </div>
-            <span style={{fontSize:8,color:"var(--text3)",fontFamily:"'Space Mono',monospace",letterSpacing:.5,fontWeight:700,padding:"3px 7px",background:"var(--bg2)",borderRadius:5,whiteSpace:"nowrap"}}>POWERED BY LOBIE</span>
+            <img src="./logos/lobie.png" alt="Lobie" style={{height:36,maxWidth:140,objectFit:"contain"}}/>
+            {inc&&inc.id!=='lobie'&&(
+              <>
+                <div style={{width:1,height:32,background:"var(--bg3)"}}/>
+                {inc.logo_url?(
+                  <img src={inc.logo_url} alt={inc.name} style={{height:30,maxWidth:140,objectFit:"contain",opacity:.85}}
+                    onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex';}}/>
+                ):null}
+                <div style={{width:34,height:34,borderRadius:8,background:brandColor,display:inc.logo_url?"none":"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:800,letterSpacing:1,flexShrink:0}}>{inc.name?.charAt(0).toUpperCase()}</div>
+              </>
+            )}
+          </div>
+          <div style={{fontSize:9,color:"var(--text3)",fontWeight:600,letterSpacing:.5,textTransform:"uppercase",marginTop:6,marginBottom:0}}>
+            {inc&&inc.id!=='lobie'?<>Estudo Lobie · <b style={{color:"var(--text2)"}}>{inc.name}</b></>:inc?.tagline||"Estudo de Rentabilidade"}
           </div>
           <h1 style={{fontSize:22,fontWeight:700,letterSpacing:-.3,marginTop:20,marginBottom:6}}>Acesso restrito</h1>
           <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:20}}>{inc?.subtitle||"Este estudo é confidencial."} Acesse via OAuth Lobie ou passkey personalizado.</p>
@@ -747,10 +752,17 @@ function App(){
     <div>
       {/* TOPBAR */}
       <div className="topbar">
-        <div className="logo">
-          LOBIE <span>Estudo de Rentabilidade</span>
-          <span style={{fontSize:9,color:"var(--text3)",marginLeft:8,fontFamily:"'Space Mono',monospace",letterSpacing:0}}>· {BUILD_VERSION}</span>
-          {shareMode&&<span style={{fontSize:9,color:"#fff",marginLeft:8,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--acc)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Somente leitura</span>}
+        <div className="logo" style={{display:"flex",alignItems:"center",gap:10}}>
+          <img src="./logos/lobie.png" alt="Lobie" style={{height:24,objectFit:"contain"}}/>
+          <span style={{borderLeft:"1px solid var(--border)",paddingLeft:10}}>Estudo de Rentabilidade</span>
+          {shareMode&&incorp&&incorp.id!=='lobie'&&(
+            <>
+              <span style={{color:"var(--text3)",fontWeight:300,fontSize:14}}>·</span>
+              {incorp.logo_url?<img src={incorp.logo_url} alt={incorp.name} style={{height:22,maxWidth:100,objectFit:"contain",opacity:.85}}/>:<span style={{fontSize:12,fontWeight:700,color:incorp.primary_color||"var(--text)"}}>{incorp.name}</span>}
+            </>
+          )}
+          <span style={{fontSize:9,color:"var(--text3)",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:0,fontWeight:400}}>· {BUILD_VERSION}</span>
+          {shareMode&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--acc)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Somente leitura</span>}
         </div>
         <div style={{display:"flex",gap:6}} className="no-print">
           {step===3&&!shareMode&&(

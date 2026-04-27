@@ -14,11 +14,12 @@
   },
   "lobie": {
     "id": "lobie",
-    "name": "Lobie · Demonstração",
+    "name": "Lobie",
     "preset": "nilo-pecanha",
     "passkey_hash": "7a0f90d775423cc3bfa88f530f2580b98281ca2f597e4356e1c9768ada29c1e7",
     "primary_color": "#0BC0ED",
     "primary_color_soft": "rgba(11, 192, 237, 0.10)",
+    "logo_url": "./logos/lobie.png",
     "tagline": "Plataforma Lobie · Estudos de Rentabilidade STR",
     "subtitle": "Modelo Cobb-Douglas hedônico + Monte Carlo + DCF financiado",
     "allowed_email_domains": ["lobie.com.br", "efix.finance", "hausbank.com.br"],
