@@ -291,7 +291,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.6 · roles editor/viewer';
+const BUILD_VERSION='v5.7 · preset cache-bust';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -622,8 +622,8 @@ function App(){
   // Auto-load preset para incorporador (não master) quando autenticar
   useEffect(()=>{
     if(authed&&!isMaster&&userIncorp?.preset&&!shareLoaded){
-      const presetUrl=`./${userIncorp.preset}.json`;
-      fetch(presetUrl).then(r=>r.json()).then(d=>{
+      const presetUrl=`./${userIncorp.preset}.json?v=${Date.now()}`;
+      fetch(presetUrl,{cache:'no-store'}).then(r=>r.json()).then(d=>{
         if(d.units&&d.units.length){
           setUnits(d.units);
           setNid(Math.max(...d.units.map(u=>u.id))+1);
@@ -716,7 +716,7 @@ function App(){
   const loadPreset=async()=>{
     setImpBusy(true);setImpMsg("Carregando Patrimar Nilo Peçanha...");
     try{
-      const r=await fetch('./nilo-pecanha.json');
+      const r=await fetch('./nilo-pecanha.json?v='+Date.now(),{cache:'no-store'});
       const d=await r.json();
       loadUnits(d.units,d.projeto);
     }catch(e){setImpMsg("Erro: "+e.message);}
@@ -852,7 +852,7 @@ function App(){
               const inc=allIncorp[id];
               if(inc?.preset){
                 try{
-                  const r=await fetch(`./${inc.preset}.json`);const d=await r.json();
+                  const r=await fetch(`./${inc.preset}.json?v=${Date.now()}`,{cache:'no-store'});const d=await r.json();
                   if(d.units?.length){
                     setUnits(d.units);setNid(Math.max(...d.units.map(u=>u.id))+1);
                     if(d.projeto)setProj(p=>({...p,...d.projeto}));
