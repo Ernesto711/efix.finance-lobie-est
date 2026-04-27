@@ -25,5 +25,19 @@
     "subtitle": "Modelo Cobb-Douglas hedônico + Monte Carlo + DCF financiado",
     "allowed_email_domains": ["patrimar.com.br"],
     "allowed_emails": []
+  },
+  "tobe": {
+    "id": "tobe",
+    "name": "Tobe",
+    "is_master": false,
+    "preset": null,
+    "passkey_hash": "f576f4816c97f7a695bef27766d91f59899c8c68b08cef934dfa9f6debdb1067",
+    "primary_color": "#1f1f1f",
+    "primary_color_soft": "rgba(31, 31, 31, 0.08)",
+    "logo_url": null,
+    "tagline": "Estudos próprios de rentabilidade STR",
+    "subtitle": "Modelo Cobb-Douglas hedônico + Monte Carlo + DCF financiado",
+    "allowed_email_domains": ["tobeinc.com.br"],
+    "allowed_emails": []
   }
 }

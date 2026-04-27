@@ -291,7 +291,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.5 · admin whitelist';
+const BUILD_VERSION='v5.6 · roles editor/viewer';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -483,6 +483,10 @@ function App(){
   const authed=!!session;
   const isMaster=!!session?.isMaster;
   const userIncorp=session?.incorpId&&allIncorp?allIncorp[session.incorpId]:null;
+  // Viewer = incorporador com preset (locked Step 3)
+  // Editor = incorporador sem preset (cria próprios estudos, Step 1/2/3)
+  const isViewer=authed&&!isMaster&&!!userIncorp?.preset;
+  const isEditor=authed&&!isMaster&&!userIncorp?.preset;
   // Para a tela de login, branding default = Lobie. Quando autenticado
   // como incorporador, branding switcha para o incorporador.
   const incorp=userIncorp||allIncorp?.['lobie-master']||null;
@@ -611,8 +615,9 @@ function App(){
   const[sd,setSd]=useState(-1);
   const[showM,setShowM]=useState(false);
   const[shareLoaded,setShareLoaded]=useState(false);
-  // shareMode = read-only mode forçado p/ incorporadores (não master)
-  const shareMode=authed&&!isMaster;
+  // shareMode = read-only locked p/ incorporadores com preset (viewer)
+  // Editor (incorporador sem preset) tem editor completo, mas isolado
+  const shareMode=isViewer;
 
   // Auto-load preset para incorporador (não master) quando autenticar
   useEffect(()=>{
@@ -837,7 +842,8 @@ function App(){
           )}
           <span style={{fontSize:9,color:"var(--text3)",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:0,fontWeight:400}}>· {BUILD_VERSION}</span>
           {isMaster&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--green)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Master</span>}
-          {!isMaster&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--acc)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Somente leitura</span>}
+          {isViewer&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--acc)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Somente leitura</span>}
+          {isEditor&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--warn)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Editor</span>}
         </div>
         <div style={{display:"flex",gap:6,alignItems:"center"}} className="no-print">
           {isMaster&&allIncorp&&(
