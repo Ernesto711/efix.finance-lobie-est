@@ -24,7 +24,13 @@
     "tagline": "Estudo de Rentabilidade · Nilo Peçanha",
     "subtitle": "Modelo Cobb-Douglas hedônico + Monte Carlo + DCF financiado",
     "allowed_email_domains": ["patrimar.com.br"],
-    "allowed_emails": []
+    "allowed_emails": [
+      "diretoria@patrimar.com.br",
+      "lucas.couto@patrimar.com.br",
+      "larissa.castro@patrimar.com.br",
+      "paulo.araujo@patrimar.com.br",
+      "gabriel.fidalgo@patrimar.com.br"
+    ]
   },
   "tobe": {
     "id": "tobe",
