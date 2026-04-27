@@ -289,19 +289,60 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v4.3 · auth gate';
+const BUILD_VERSION='v5.0 · multi-tenant OAuth';
 
-/* ═══ AUTH GATE PARA SHARE MODE ═════════════════════════════════════
-   SHA-256 do password é commitado no source (não a senha plain).
-   Usuário digita senha → hashed → comparado com PWD_HASH. Sessão
-   persistida em localStorage. Para trocar a senha: gerar SHA-256 do
-   novo password e atualizar PWD_HASH abaixo.
-   Senha atual: "lobie-patrimar-2026" */
-const PWD_HASH='3af8fd513d6a0ef0df0c0d7b240af1b614189e5916e5d2bb0a8ce9b618cfcbac';
+/* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
+   Login per incorporador, com 2 caminhos:
+   1. OAuth Lobie via email OTP (backend efixdi-backend-production
+      Railway, mesmo usado pelo efix.finance/admin). Email validado
+      contra allowed_email_domains do incorporador.
+   2. Passkey personalizado (SHA-256 commitado em incorporadores.json,
+      gerado pela Lobie e enviado out-of-band para cada incorporador).
+   Branding (logo/cor/tagline) pulled de incorporadores.json[inc]. */
 async function sha256Hex(s){
   const buf=new TextEncoder().encode(s);
   const hash=await crypto.subtle.digest('SHA-256',buf);
   return [...new Uint8Array(hash)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+/* Backend de auth Lobie — DEPLOY SEPARADO de efixdi-backend p/ não
+   misturar concerns. Endpoints esperados (mesmo contrato do EfixAuth):
+     POST /auth/send-otp    body {email}                → {success}
+     POST /auth/verify-otp  body {email,code}           → {success,token,user}
+   Sugestão: novo Railway service "lobie-auth" rodando Fastify+Resend.
+   Set LOBIE_AUTH_BACKEND abaixo após deploy. Enquanto não estiver
+   deployado, o tab OAuth mostra "em breve" e usuários usam passkey. */
+const LOBIE_AUTH_BACKEND='https://lobie-auth-production.up.railway.app';
+const LOBIE_AUTH_ENABLED=false;  // true após deploy do backend
+const AUTH_TOKEN_KEY='lobie_auth_session';
+const lobieAuth={
+  async sendOTP(email){
+    if(!LOBIE_AUTH_ENABLED)throw new Error('OAuth Lobie em deploy. Use o passkey enviado pela equipe Lobie por enquanto.');
+    const r=await fetch(`${LOBIE_AUTH_BACKEND}/auth/send-otp`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:email.trim().toLowerCase()})
+    });
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Falha ao enviar código');
+    return d;
+  },
+  async verifyOTP(email,code){
+    if(!LOBIE_AUTH_ENABLED)throw new Error('OAuth Lobie em deploy.');
+    const r=await fetch(`${LOBIE_AUTH_BACKEND}/auth/verify-otp`,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email:email.trim().toLowerCase(),code})
+    });
+    const d=await r.json();
+    if(!r.ok)throw new Error(d.error||'Código inválido');
+    if(!d.success||!d.token)throw new Error('Token não recebido');
+    return d;
+  }
+};
+function emailMatchesIncorp(email,inc){
+  if(!email||!inc)return false;
+  const e=email.trim().toLowerCase();
+  if(inc.allowed_emails?.includes(e))return true;
+  const dom=e.split('@')[1]||'';
+  return inc.allowed_email_domains?.some(d=>dom===d.toLowerCase());
 }
 
 /* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
@@ -411,26 +452,79 @@ const U0=[
 
 function App(){
   const urlParams=new URLSearchParams(window.location.search);
-  const shareMode=urlParams.has('share')||urlParams.has('view');
+  const shareMode=urlParams.has('share')||urlParams.has('view')||urlParams.has('inc');
   const shareName=urlParams.get('share')||urlParams.get('view')||'';
+  const incName=urlParams.get('inc')||(shareMode?'lobie':'');
+
+  const[incorp,setIncorp]=useState(null);
+  const[incorpLoaded,setIncorpLoaded]=useState(false);
   const[authed,setAuthed]=useState(()=>{
     if(!shareMode)return true;
-    return localStorage.getItem('lobie_auth')===PWD_HASH;
+    try{const s=JSON.parse(localStorage.getItem(AUTH_TOKEN_KEY)||'null');return !!(s&&s.expires>Date.now());}catch{return false;}
   });
+  const[authUser,setAuthUser]=useState(()=>{
+    try{return JSON.parse(localStorage.getItem(AUTH_TOKEN_KEY)||'null')?.user||null;}catch{return null;}
+  });
+  const[authMode,setAuthMode]=useState('oauth');
+  const[email,setEmail]=useState('');
+  const[otpSent,setOtpSent]=useState(false);
+  const[otpCode,setOtpCode]=useState('');
   const[pwdInput,setPwdInput]=useState('');
-  const[pwdErr,setPwdErr]=useState('');
-  const[pwdBusy,setPwdBusy]=useState(false);
-  const tryAuth=async()=>{
-    if(!pwdInput)return;
-    setPwdBusy(true);setPwdErr('');
-    const h=await sha256Hex(pwdInput);
-    if(h===PWD_HASH){
-      localStorage.setItem('lobie_auth',h);
-      setAuthed(true);setPwdInput('');
-    }else setPwdErr('Senha incorreta. Verifique e tente novamente.');
-    setPwdBusy(false);
+  const[authErr,setAuthErr]=useState('');
+  const[authBusy,setAuthBusy]=useState(false);
+
+  // Load incorporador config
+  useEffect(()=>{
+    if(!shareMode||incorpLoaded)return;
+    fetch('./incorporadores.json').then(r=>r.json()).then(d=>{
+      const i=d[incName]||d['lobie'];
+      if(i)setIncorp(i);
+      setIncorpLoaded(true);
+    }).catch(()=>setIncorpLoaded(true));
+  },[shareMode,incName,incorpLoaded]);
+
+  const sendOtp=async()=>{
+    if(!email)return;
+    setAuthBusy(true);setAuthErr('');
+    try{
+      if(!emailMatchesIncorp(email,incorp)){
+        setAuthErr(`Email não autorizado para ${incorp?.name||'este estudo'}. Solicite acesso a contato@lobie.com.br.`);
+        setAuthBusy(false);return;
+      }
+      await lobieAuth.sendOTP(email);
+      setOtpSent(true);
+    }catch(e){setAuthErr(e.message||'Erro ao enviar código.');}
+    setAuthBusy(false);
   };
-  const logout=()=>{localStorage.removeItem('lobie_auth');setAuthed(false);};
+  const verifyOtp=async()=>{
+    if(!otpCode)return;
+    setAuthBusy(true);setAuthErr('');
+    try{
+      const r=await lobieAuth.verifyOTP(email,otpCode);
+      const session={token:r.token,user:r.user||{email},expires:Date.now()+24*60*60*1000,via:'oauth',inc:incName};
+      localStorage.setItem(AUTH_TOKEN_KEY,JSON.stringify(session));
+      setAuthUser(session.user);setAuthed(true);
+      setOtpCode('');setEmail('');setOtpSent(false);
+    }catch(e){setAuthErr(e.message||'Código inválido.');}
+    setAuthBusy(false);
+  };
+  const tryPasskey=async()=>{
+    if(!pwdInput||!incorp)return;
+    setAuthBusy(true);setAuthErr('');
+    const h=await sha256Hex(pwdInput);
+    if(h===incorp.passkey_hash){
+      const session={user:{email:`${incorp.id}@passkey`,name:incorp.name},expires:Date.now()+24*60*60*1000,via:'passkey',inc:incName};
+      localStorage.setItem(AUTH_TOKEN_KEY,JSON.stringify(session));
+      setAuthUser(session.user);setAuthed(true);
+      setPwdInput('');
+    }else setAuthErr('Passkey incorreto. Verifique o código enviado pela Lobie.');
+    setAuthBusy(false);
+  };
+  const logout=()=>{
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    setAuthed(false);setAuthUser(null);
+    setEmail('');setOtpSent(false);setOtpCode('');setPwdInput('');setAuthErr('');
+  };
   const[step,setStep]=useState(shareMode?3:1);
   const[proj,setProj]=useState(P0);
   const[units,setUnits]=useState(U0);
@@ -440,11 +534,12 @@ function App(){
   const[showM,setShowM]=useState(false);
   const[shareLoaded,setShareLoaded]=useState(false);
 
-  // Auto-load preset when in share mode
+  // Auto-load preset when in share mode + authed
   useEffect(()=>{
-    if(shareMode&&!shareLoaded){
-      const preset=shareName==='nilo'||shareName==='nilo-pecanha'?'./nilo-pecanha.json':`./${shareName}.json`;
-      fetch(preset).then(r=>r.json()).then(d=>{
+    if(shareMode&&authed&&!shareLoaded){
+      const presetName=incorp?.preset||shareName||'nilo-pecanha';
+      const presetUrl=presetName==='nilo'?'./nilo-pecanha.json':`./${presetName}.json`;
+      fetch(presetUrl).then(r=>r.json()).then(d=>{
         if(d.units&&d.units.length){
           setUnits(d.units);
           setNid(Math.max(...d.units.map(u=>u.id))+1);
@@ -453,7 +548,7 @@ function App(){
         }
       }).catch(()=>{}).finally(()=>setShareLoaded(true));
     }
-  },[shareMode,shareName,shareLoaded]);
+  },[shareMode,authed,shareName,shareLoaded,incorp]);
 
   const bd=BAIRROS[proj.bairro]||BAIRROS["Ipanema"];
   const results=useMemo(()=>units.map(u=>calc(u,proj,bd)),[units,proj,bd]);
@@ -562,29 +657,86 @@ function App(){
 
   // Auth gate for share mode
   if(shareMode&&!authed){
+    if(!incorpLoaded){
+      return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Space Mono',monospace"}}>Carregando...</div>
+      </div>;
+    }
+    const inc=incorp;
+    const brandColor=inc?.primary_color||"#0BC0ED";
+    const brandSoft=inc?.primary_color_soft||"rgba(11,192,237,.10)";
     return (
-      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:"var(--bg)"}}>
-        <div style={{maxWidth:420,width:"100%",background:"#fff",borderRadius:16,padding:32,boxShadow:"0 10px 40px rgba(0,0,0,.08)",border:"1px solid var(--border)"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-            <div style={{width:34,height:34,borderRadius:8,background:"var(--acc)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:"#fff",fontWeight:700,letterSpacing:1}}>L</div>
-            <div>
-              <div style={{fontSize:15,fontWeight:800,letterSpacing:1.5}}>LOBIE</div>
-              <div style={{fontSize:10,color:"var(--text3)",fontWeight:600,letterSpacing:.5}}>ESTUDO DE RENTABILIDADE</div>
+      <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:`linear-gradient(135deg, ${brandSoft} 0%, var(--bg) 70%)`}}>
+        <div style={{maxWidth:460,width:"100%",background:"#fff",borderRadius:18,padding:34,boxShadow:"0 20px 60px rgba(0,0,0,.10)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
+          <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:brandColor}}/>
+          <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:8}}>
+            {inc?.logo_url?(
+              <img src={inc.logo_url} alt={inc.name} style={{height:38,maxWidth:160,objectFit:"contain"}}
+                onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex';}}/>
+            ):null}
+            <div style={{width:42,height:42,borderRadius:10,background:brandColor,display:inc?.logo_url?"none":"flex",alignItems:"center",justifyContent:"center",fontSize:18,color:"#fff",fontWeight:800,letterSpacing:1,flexShrink:0}}>{inc?.name?.charAt(0).toUpperCase()||"L"}</div>
+            <div style={{flex:1,minWidth:0}}>
+              {!inc?.logo_url&&<div style={{fontSize:15,fontWeight:800,letterSpacing:.5,lineHeight:1.1}}>{inc?.name||"Lobie"}</div>}
+              <div style={{fontSize:9,color:"var(--text3)",fontWeight:600,letterSpacing:.5,marginTop:inc?.logo_url?0:3,textTransform:"uppercase",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inc?.tagline||"Estudo de Rentabilidade"}</div>
             </div>
+            <span style={{fontSize:8,color:"var(--text3)",fontFamily:"'Space Mono',monospace",letterSpacing:.5,fontWeight:700,padding:"3px 7px",background:"var(--bg2)",borderRadius:5,whiteSpace:"nowrap"}}>POWERED BY LOBIE</span>
           </div>
-          <h1 style={{fontSize:21,fontWeight:700,letterSpacing:-.3,marginTop:18,marginBottom:5}}>Acesso restrito</h1>
-          <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:18}}>Este estudo é confidencial. Informe a senha de acesso fornecida pela equipe Lobie para continuar.</p>
-          <form onSubmit={e=>{e.preventDefault();tryAuth();}}>
-            <label style={{display:"block",fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:6}}>Senha</label>
-            <input type="password" value={pwdInput} onChange={e=>{setPwdInput(e.target.value);setPwdErr('');}} autoFocus
-              placeholder="••••••••" style={{width:"100%",padding:"12px 14px",fontSize:14,fontFamily:"'Space Mono',monospace",letterSpacing:1,borderRadius:10,border:`1px solid ${pwdErr?"var(--rb)":"var(--border)"}`,background:pwdErr?"var(--rbg)":"var(--bg3)",outline:"none",transition:"all .15s"}}/>
-            {pwdErr&&<div style={{fontSize:11,color:"var(--red)",marginTop:7,fontWeight:600}}>{pwdErr}</div>}
-            <button type="submit" disabled={pwdBusy||!pwdInput} className="btn btn-p btn-lg" style={{marginTop:14,width:"100%",justifyContent:"center"}}>
-              {pwdBusy?"Verificando...":"Acessar estudo →"}
+          <h1 style={{fontSize:22,fontWeight:700,letterSpacing:-.3,marginTop:20,marginBottom:6}}>Acesso restrito</h1>
+          <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:20}}>{inc?.subtitle||"Este estudo é confidencial."} Acesse via OAuth Lobie ou passkey personalizado.</p>
+
+          {/* Tabs */}
+          <div style={{display:"flex",gap:3,padding:3,background:"var(--bg2)",borderRadius:10,marginBottom:16}}>
+            <button type="button" onClick={()=>{setAuthMode('oauth');setAuthErr('');}} style={{flex:1,padding:"8px 10px",borderRadius:7,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",background:authMode==='oauth'?"#fff":"transparent",color:authMode==='oauth'?brandColor:"var(--text2)",boxShadow:authMode==='oauth'?"0 1px 4px rgba(0,0,0,.05)":"none",transition:"all .15s",fontFamily:"inherit"}}>
+              ✉ Email · OAuth Lobie
             </button>
-          </form>
-          <div style={{marginTop:18,paddingTop:16,borderTop:"1px solid var(--bg3)",fontSize:10,color:"var(--text3)",lineHeight:1.6}}>
-            Sem a senha? Solicite acesso a <b style={{color:"var(--text2)"}}>contato@lobie.com.br</b>. A sessão é gravada localmente neste navegador.
+            <button type="button" onClick={()=>{setAuthMode('passkey');setAuthErr('');}} style={{flex:1,padding:"8px 10px",borderRadius:7,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",background:authMode==='passkey'?"#fff":"transparent",color:authMode==='passkey'?brandColor:"var(--text2)",boxShadow:authMode==='passkey'?"0 1px 4px rgba(0,0,0,.05)":"none",transition:"all .15s",fontFamily:"inherit"}}>
+              🔑 Passkey personalizado
+            </button>
+          </div>
+
+          {authMode==='oauth'?(
+            <form onSubmit={e=>{e.preventDefault();otpSent?verifyOtp():sendOtp();}}>
+              {!otpSent?(
+                <>
+                  <label style={{display:"block",fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:6}}>Email corporativo</label>
+                  <input type="email" value={email} onChange={e=>{setEmail(e.target.value);setAuthErr('');}} autoFocus
+                    placeholder="seu-nome@empresa.com.br" style={{width:"100%",padding:"12px 14px",fontSize:14,borderRadius:10,border:`1px solid ${authErr?"var(--rb)":"var(--border)"}`,background:authErr?"var(--rbg)":"var(--bg3)",outline:"none",transition:"all .15s",fontFamily:"inherit"}}/>
+                  <button type="submit" disabled={authBusy||!email} style={{marginTop:14,width:"100%",padding:"12px",borderRadius:10,border:"none",fontSize:13,fontWeight:700,background:brandColor,color:"#fff",cursor:authBusy||!email?"not-allowed":"pointer",opacity:authBusy||!email?.6:1,fontFamily:"inherit"}}>
+                    {authBusy?"Enviando...":"Enviar código por email →"}
+                  </button>
+                </>
+              ):(
+                <>
+                  <div style={{padding:"10px 12px",background:brandSoft,border:`1px solid ${brandColor}`,borderRadius:10,fontSize:11,color:"var(--text)",lineHeight:1.5,marginBottom:14}}>
+                    Código enviado para <b>{email}</b>. Verifique sua caixa de entrada (e spam).
+                  </div>
+                  <label style={{display:"block",fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:6}}>Código de 6 dígitos</label>
+                  <input type="text" inputMode="numeric" pattern="[0-9]*" maxLength={6} value={otpCode} onChange={e=>{setOtpCode(e.target.value.replace(/\D/g,''));setAuthErr('');}} autoFocus
+                    placeholder="000000" style={{width:"100%",padding:"12px 14px",fontSize:18,fontFamily:"'Space Mono',monospace",letterSpacing:6,textAlign:"center",borderRadius:10,border:`1px solid ${authErr?"var(--rb)":"var(--border)"}`,background:authErr?"var(--rbg)":"var(--bg3)",outline:"none",transition:"all .15s",fontWeight:700}}/>
+                  <button type="submit" disabled={authBusy||otpCode.length<4} style={{marginTop:14,width:"100%",padding:"12px",borderRadius:10,border:"none",fontSize:13,fontWeight:700,background:brandColor,color:"#fff",cursor:authBusy||otpCode.length<4?"not-allowed":"pointer",opacity:authBusy||otpCode.length<4?.6:1,fontFamily:"inherit"}}>
+                    {authBusy?"Verificando...":"Verificar e acessar →"}
+                  </button>
+                  <button type="button" onClick={()=>{setOtpSent(false);setOtpCode('');setAuthErr('');}} style={{marginTop:8,width:"100%",padding:"8px",borderRadius:8,border:"none",fontSize:11,background:"transparent",color:"var(--text2)",cursor:"pointer",fontFamily:"inherit"}}>
+                    ← Trocar email
+                  </button>
+                </>
+              )}
+            </form>
+          ):(
+            <form onSubmit={e=>{e.preventDefault();tryPasskey();}}>
+              <label style={{display:"block",fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:6}}>Passkey enviado pela Lobie</label>
+              <input type="password" value={pwdInput} onChange={e=>{setPwdInput(e.target.value);setAuthErr('');}} autoFocus
+                placeholder="passkey-personalizado" style={{width:"100%",padding:"12px 14px",fontSize:14,fontFamily:"'Space Mono',monospace",letterSpacing:1,borderRadius:10,border:`1px solid ${authErr?"var(--rb)":"var(--border)"}`,background:authErr?"var(--rbg)":"var(--bg3)",outline:"none",transition:"all .15s"}}/>
+              <button type="submit" disabled={authBusy||!pwdInput} style={{marginTop:14,width:"100%",padding:"12px",borderRadius:10,border:"none",fontSize:13,fontWeight:700,background:brandColor,color:"#fff",cursor:authBusy||!pwdInput?"not-allowed":"pointer",opacity:authBusy||!pwdInput?.6:1,fontFamily:"inherit"}}>
+                {authBusy?"Verificando...":"Acessar com passkey →"}
+              </button>
+            </form>
+          )}
+
+          {authErr&&<div style={{fontSize:11,color:"var(--red)",marginTop:11,fontWeight:600,padding:"9px 11px",background:"var(--rbg)",borderRadius:8,border:"1px solid var(--rb)"}}>{authErr}</div>}
+
+          <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid var(--bg3)",fontSize:10,color:"var(--text3)",lineHeight:1.7}}>
+            Sem acesso? Solicite a <b style={{color:"var(--text2)"}}>contato@lobie.com.br</b>. Sessão válida por 24h, gravada apenas neste navegador.
           </div>
         </div>
       </div>

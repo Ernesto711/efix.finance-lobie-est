@@ -1,0 +1,27 @@
+{
+  "patrimar": {
+    "id": "patrimar",
+    "name": "Patrimar Engenharia",
+    "preset": "nilo-pecanha",
+    "passkey_hash": "9c26e59495d7ba9799c0957ff9e5bbdc1b07ff051c07a1dae1564933fb01428e",
+    "primary_color": "#1a4789",
+    "primary_color_soft": "rgba(26, 71, 137, 0.10)",
+    "logo_url": "./logos/patrimar.svg",
+    "tagline": "Estudo de Rentabilidade · Nilo Peçanha",
+    "subtitle": "Powered by Lobie · Modelo Cobb-Douglas hedônico + Monte Carlo + DCF financiado",
+    "allowed_email_domains": ["patrimar.com.br", "lobie.com.br", "efix.finance", "hausbank.com.br"],
+    "allowed_emails": []
+  },
+  "lobie": {
+    "id": "lobie",
+    "name": "Lobie · Demonstração",
+    "preset": "nilo-pecanha",
+    "passkey_hash": "7a0f90d775423cc3bfa88f530f2580b98281ca2f597e4356e1c9768ada29c1e7",
+    "primary_color": "#0BC0ED",
+    "primary_color_soft": "rgba(11, 192, 237, 0.10)",
+    "tagline": "Plataforma Lobie · Estudos de Rentabilidade STR",
+    "subtitle": "Modelo Cobb-Douglas hedônico + Monte Carlo + DCF financiado",
+    "allowed_email_domains": ["lobie.com.br", "efix.finance", "hausbank.com.br"],
+    "allowed_emails": []
+  }
+}
