@@ -291,7 +291,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.7 · preset cache-bust';
+const BUILD_VERSION='v5.8 · master auto-load';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -619,9 +619,11 @@ function App(){
   // Editor (incorporador sem preset) tem editor completo, mas isolado
   const shareMode=isViewer;
 
-  // Auto-load preset para incorporador (não master) quando autenticar
+  // Auto-load preset quando autenticar (master ou incorporador)
+  // Master fica com editor completo (Step 1/2/3 navegável); incorporador
+  // viewer fica locked Step 3 via shareMode/isViewer
   useEffect(()=>{
-    if(authed&&!isMaster&&userIncorp?.preset&&!shareLoaded){
+    if(authed&&userIncorp?.preset&&!shareLoaded){
       const presetUrl=`./${userIncorp.preset}.json?v=${Date.now()}`;
       fetch(presetUrl,{cache:'no-store'}).then(r=>r.json()).then(d=>{
         if(d.units&&d.units.length){
@@ -632,7 +634,7 @@ function App(){
         }
       }).catch(()=>{}).finally(()=>setShareLoaded(true));
     }
-  },[authed,isMaster,userIncorp,shareLoaded]);
+  },[authed,userIncorp,shareLoaded]);
 
   const bd=BAIRROS[proj.bairro]||BAIRROS["Ipanema"];
   const results=useMemo(()=>units.map(u=>calc(u,proj,bd)),[units,proj,bd]);

@@ -3,6 +3,7 @@
     "id": "lobie-master",
     "name": "Lobie",
     "is_master": true,
+    "preset": "nilo-pecanha",
     "primary_color": "#0BC0ED",
     "primary_color_soft": "rgba(11, 192, 237, 0.10)",
     "logo_url": "./logos/lobie.png",
