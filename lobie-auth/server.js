@@ -23,6 +23,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import jwt from 'jsonwebtoken';
+import fs from 'fs/promises';
 
 const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || 'info' }
@@ -52,11 +53,58 @@ const ALLOWED_DOMAINS = (process.env.ALLOWED_DOMAINS || DEFAULT_DOMAINS.join(','
 const ALLOWED_EMAILS = (process.env.ALLOWED_EMAILS || DEFAULT_EMAILS.join(','))
   .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
 
+// Admins (apenas eles podem editar a whitelist via /admin/whitelist)
+const DEFAULT_ADMINS = [
+  'ernesto.otero@hausbank.com.br',
+  'ernesto.otero@lobie.com.br',
+  'ernesto.otero@efix.finance',
+  'ernesto@efix.finance',
+];
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || DEFAULT_ADMINS.join(','))
+  .split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+function isAdmin(email) {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.trim().toLowerCase());
+}
+
+// ── Dynamic whitelist (file-persisted, complementa env vars) ───────
+const WHITELIST_FILE = process.env.WHITELIST_FILE || './whitelist.json';
+let dynEmails = new Set();
+let dynDomains = new Set();
+
+async function loadDynamicWhitelist() {
+  try {
+    const data = await fs.readFile(WHITELIST_FILE, 'utf-8');
+    const p = JSON.parse(data);
+    dynEmails = new Set((p.emails || []).map(s => String(s).toLowerCase()));
+    dynDomains = new Set((p.domains || []).map(s => String(s).toLowerCase()));
+    app.log.info(`loaded dynamic whitelist: ${dynEmails.size} emails, ${dynDomains.size} domains`);
+  } catch (e) {
+    if (e.code !== 'ENOENT') app.log.warn({ err: e.message }, 'failed to load dynamic whitelist');
+  }
+}
+
+async function saveDynamicWhitelist() {
+  try {
+    await fs.writeFile(WHITELIST_FILE, JSON.stringify({
+      emails: [...dynEmails],
+      domains: [...dynDomains],
+      updated_at: new Date().toISOString(),
+    }, null, 2));
+  } catch (e) {
+    app.log.error({ err: e.message }, 'failed to save dynamic whitelist');
+  }
+}
+
 function isEmailAllowed(email) {
   const e = email.trim().toLowerCase();
   if (ALLOWED_EMAILS.includes(e)) return true;
+  if (dynEmails.has(e)) return true;
   const dom = e.split('@')[1] || '';
-  return ALLOWED_DOMAINS.includes(dom);
+  if (ALLOWED_DOMAINS.includes(dom)) return true;
+  if (dynDomains.has(dom)) return true;
+  return false;
 }
 
 // ── OTP store (in-memory; suficiente para 1 instância Railway) ─────
@@ -199,21 +247,104 @@ app.get('/health', async () => ({ ok: true, ts: Date.now(), service: 'lobie-auth
 
 app.get('/', async () => ({
   service: 'lobie-auth',
-  version: '1.0.0',
-  endpoints: ['POST /auth/send-otp', 'POST /auth/verify-otp', 'GET /health'],
-  whitelisted_domains: ALLOWED_DOMAINS.length,
-  whitelisted_emails: ALLOWED_EMAILS.length,
+  version: '1.1.0',
+  endpoints: [
+    'POST /auth/send-otp',
+    'POST /auth/verify-otp',
+    'GET /admin/whitelist (JWT admin)',
+    'POST /admin/whitelist (JWT admin)',
+    'DELETE /admin/whitelist (JWT admin)',
+    'GET /health',
+  ],
+  whitelisted_domains_static: ALLOWED_DOMAINS.length,
+  whitelisted_emails_static: ALLOWED_EMAILS.length,
+  whitelisted_domains_dynamic: dynDomains.size,
+  whitelisted_emails_dynamic: dynEmails.size,
+  admins: ADMIN_EMAILS.length,
   email_transport: resendClient ? 'resend' : (smtpTransporter ? 'smtp' : 'none'),
 }));
+
+// ── Admin auth middleware ──────────────────────────────────────────
+async function requireAdmin(req, reply) {
+  const auth = req.headers.authorization || '';
+  if (!auth.startsWith('Bearer ')) {
+    return reply.code(401).send({ error: 'Token Bearer obrigatório' });
+  }
+  try {
+    const token = auth.slice(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || '');
+    if (!decoded?.email || !isAdmin(decoded.email)) {
+      return reply.code(403).send({ error: 'Acesso restrito ao administrador (Ernesto)' });
+    }
+    req.user = decoded;
+  } catch (e) {
+    return reply.code(401).send({ error: 'Token inválido ou expirado. Faça login via OAuth novamente.' });
+  }
+}
+
+// ── Admin endpoints ────────────────────────────────────────────────
+app.get('/admin/whitelist', { preHandler: requireAdmin }, async (req) => ({
+  static: { domains: ALLOWED_DOMAINS, emails: ALLOWED_EMAILS },
+  dynamic: { domains: [...dynDomains].sort(), emails: [...dynEmails].sort() },
+  admins: ADMIN_EMAILS,
+  caller: req.user.email,
+}));
+
+app.post('/admin/whitelist', { preHandler: requireAdmin }, async (req, reply) => {
+  const { email, domain } = req.body || {};
+  if (email) {
+    const v = String(email).trim().toLowerCase();
+    if (!v.includes('@')) return reply.code(400).send({ error: 'Email inválido' });
+    if (ALLOWED_EMAILS.includes(v)) return { success: true, message: 'Já está na whitelist estática (env var)', email: v };
+    dynEmails.add(v);
+    await saveDynamicWhitelist();
+    app.log.info({ admin: req.user.email, added_email: v }, 'whitelist email added');
+    return { success: true, added: { email: v } };
+  }
+  if (domain) {
+    const v = String(domain).trim().toLowerCase().replace(/^@/, '');
+    if (!v.includes('.')) return reply.code(400).send({ error: 'Domínio inválido' });
+    if (ALLOWED_DOMAINS.includes(v)) return { success: true, message: 'Já está na whitelist estática (env var)', domain: v };
+    dynDomains.add(v);
+    await saveDynamicWhitelist();
+    app.log.info({ admin: req.user.email, added_domain: v }, 'whitelist domain added');
+    return { success: true, added: { domain: v } };
+  }
+  return reply.code(400).send({ error: 'Body precisa de { email } ou { domain }' });
+});
+
+app.delete('/admin/whitelist', { preHandler: requireAdmin }, async (req, reply) => {
+  const { email, domain } = req.body || {};
+  if (email) {
+    const v = String(email).trim().toLowerCase();
+    if (ALLOWED_EMAILS.includes(v)) return reply.code(400).send({ error: 'Email é estático (env var ALLOWED_EMAILS). Edite no Railway dashboard.' });
+    const removed = dynEmails.delete(v);
+    if (removed) await saveDynamicWhitelist();
+    app.log.info({ admin: req.user.email, removed_email: v, found: removed }, 'whitelist email removed');
+    return { success: true, removed: { email: v }, found: removed };
+  }
+  if (domain) {
+    const v = String(domain).trim().toLowerCase().replace(/^@/, '');
+    if (ALLOWED_DOMAINS.includes(v)) return reply.code(400).send({ error: 'Domínio é estático (env var ALLOWED_DOMAINS).' });
+    const removed = dynDomains.delete(v);
+    if (removed) await saveDynamicWhitelist();
+    app.log.info({ admin: req.user.email, removed_domain: v, found: removed }, 'whitelist domain removed');
+    return { success: true, removed: { domain: v }, found: removed };
+  }
+  return reply.code(400).send({ error: 'Body precisa de { email } ou { domain }' });
+});
 
 // ── Start ──────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '3000');
 const HOST = process.env.HOST || '0.0.0.0';
 
 try {
+  await loadDynamicWhitelist();
   await app.listen({ port: PORT, host: HOST });
   app.log.info(`lobie-auth listening on http://${HOST}:${PORT}`);
-  app.log.info(`whitelisted: ${ALLOWED_DOMAINS.length} domains, ${ALLOWED_EMAILS.length} emails`);
+  app.log.info(`whitelist static: ${ALLOWED_DOMAINS.length} domains, ${ALLOWED_EMAILS.length} emails`);
+  app.log.info(`whitelist dynamic: ${dynDomains.size} domains, ${dynEmails.size} emails`);
+  app.log.info(`admins: ${ADMIN_EMAILS.length}`);
 } catch (err) {
   app.log.error(err);
   process.exit(1);

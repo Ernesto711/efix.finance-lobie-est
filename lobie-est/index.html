@@ -291,7 +291,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.4 · OAuth live';
+const BUILD_VERSION='v5.5 · admin whitelist';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -503,9 +503,10 @@ function App(){
     }).catch(()=>setIncorpLoaded(true));
   },[incorpLoaded]);
 
-  const finishAuth=(user,role,via)=>{
+  const finishAuth=(user,role,via,token)=>{
     const s={
       user,
+      token:token||null,
       incorpId:role.id,
       isMaster:role.isMaster,
       via,
@@ -536,7 +537,7 @@ function App(){
       const role=detectRole(allIncorp,email);
       if(!role){setAuthErr('Email não autorizado.');setAuthBusy(false);return;}
       const r=await lobieAuth.verifyOTP(email,otpCode);
-      finishAuth(r.user||{email},role,'oauth');
+      finishAuth(r.user||{email},role,'oauth',r.token);
     }catch(e){setAuthErr(e.message||'Código inválido.');}
     setAuthBusy(false);
   };
@@ -555,6 +556,53 @@ function App(){
     setSession(null);
     setEmail('');setOtpSent(false);setOtpCode('');setPwdInput('');setAuthErr('');
   };
+
+  // ── Admin (whitelist management) ──────────────────────────────
+  const ADMIN_EMAIL_LIST=['ernesto.otero@hausbank.com.br','ernesto.otero@lobie.com.br','ernesto.otero@efix.finance','ernesto@efix.finance'];
+  const isAdmin=ADMIN_EMAIL_LIST.includes((session?.user?.email||'').toLowerCase());
+  const canAdmin=isAdmin&&session?.via==='oauth'&&session?.token;
+  const[showAdmin,setShowAdmin]=useState(false);
+  const[wl,setWl]=useState(null);
+  const[wlBusy,setWlBusy]=useState(false);
+  const[wlMsg,setWlMsg]=useState('');
+  const[wlInput,setWlInput]=useState('');
+  const adminFetch=async(method,body)=>{
+    const r=await fetch(`${LOBIE_AUTH_BACKEND}/admin/whitelist`,{
+      method,
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${session.token}`},
+      body:body?JSON.stringify(body):undefined
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||`HTTP ${r.status}`);
+    return d;
+  };
+  const loadWhitelist=async()=>{
+    setWlBusy(true);setWlMsg('');
+    try{const d=await adminFetch('GET');setWl(d);}
+    catch(e){setWlMsg('Erro: '+e.message);}
+    setWlBusy(false);
+  };
+  const addWhitelist=async()=>{
+    const v=wlInput.trim();if(!v)return;
+    setWlBusy(true);setWlMsg('');
+    try{
+      const body=v.includes('@')?{email:v}:{domain:v};
+      await adminFetch('POST',body);
+      setWlInput('');setWlMsg(`✓ ${v} adicionado`);
+      await loadWhitelist();
+    }catch(e){setWlMsg('Erro: '+e.message);}
+    setWlBusy(false);
+  };
+  const removeWhitelist=async(item,type)=>{
+    setWlBusy(true);setWlMsg('');
+    try{
+      await adminFetch('DELETE',{[type]:item});
+      setWlMsg(`✓ ${item} removido`);
+      await loadWhitelist();
+    }catch(e){setWlMsg('Erro: '+e.message);}
+    setWlBusy(false);
+  };
+  useEffect(()=>{if(showAdmin&&!wl&&canAdmin)loadWhitelist();},[showAdmin,canAdmin]);
   const[step,setStep]=useState(shareMode?3:1);
   const[proj,setProj]=useState(P0);
   const[units,setUnits]=useState(U0);
@@ -821,6 +869,7 @@ function App(){
               alert(`Link universal copiado:\n\n${url}\n\nQualquer pessoa pode acessar — login determina o que cada um vê (incorporadores vão direto ao seu estudo, master vê todos).`);
             }}>🔗 Copiar link</button>
           )}
+          {canAdmin&&<button className="btn" onClick={()=>setShowAdmin(true)} title="Gerenciar acessos · apenas admin">👥 Acessos</button>}
           {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button></>}
           <div style={{display:"flex",alignItems:"center",gap:7,marginLeft:6,paddingLeft:10,borderLeft:"1px solid var(--border)"}}>
             <span style={{fontSize:10,color:"var(--text2)",fontFamily:"'Space Mono',monospace",fontWeight:600,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={session?.user?.email}>{session?.user?.email||session?.user?.name}</span>
@@ -1433,6 +1482,114 @@ function App(){
             </div>
           </div>
 
+        </div>
+      )}
+
+      {/* ═══ ADMIN WHITELIST MODAL (apenas Ernesto via OAuth) ═══ */}
+      {showAdmin&&canAdmin&&(
+        <div onClick={()=>{if(!wlBusy)setShowAdmin(false);}} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#fff",borderRadius:16,maxWidth:680,width:"100%",maxHeight:"90vh",overflowY:"auto",padding:26,boxShadow:"0 20px 60px rgba(0,0,0,.25)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:18}}>
+              <div>
+                <h2 style={{fontSize:20,fontWeight:700,letterSpacing:-.3}}>Gerenciar acessos</h2>
+                <p style={{fontSize:12,color:"var(--text2)",marginTop:4,lineHeight:1.5}}>
+                  Apenas <b>{session?.user?.email}</b> pode adicionar/remover. Adições aqui são <b>dinâmicas</b> (persistem em arquivo). Para cadastros permanentes, edite <code>ALLOWED_EMAILS</code>/<code>ALLOWED_DOMAINS</code> no Railway dashboard.
+                </p>
+              </div>
+              <button onClick={()=>!wlBusy&&setShowAdmin(false)} style={{background:"none",border:"none",fontSize:22,cursor:"pointer",color:"var(--text3)",padding:0,lineHeight:1}}>×</button>
+            </div>
+
+            {/* Add form */}
+            <div style={{background:"var(--gbg)",border:"1px solid var(--gb)",borderRadius:12,padding:14,marginBottom:14}}>
+              <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--green)",marginBottom:8}}>+ Adicionar acesso</div>
+              <form onSubmit={e=>{e.preventDefault();addWhitelist();}}>
+                <div style={{display:"flex",gap:8}}>
+                  <input value={wlInput} onChange={e=>setWlInput(e.target.value)} placeholder="email@empresa.com.br ou empresa.com.br"
+                    style={{flex:1,padding:"10px 12px",fontSize:13,borderRadius:8,border:"1px solid var(--border)",fontFamily:"inherit"}} disabled={wlBusy}/>
+                  <button type="submit" disabled={wlBusy||!wlInput.trim()} className="btn btn-p" style={{padding:"10px 18px",fontSize:12,whiteSpace:"nowrap"}}>
+                    {wlBusy?"...":"Adicionar"}
+                  </button>
+                </div>
+                <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
+                  Detecta automaticamente: <b>com @ → email individual</b> · <b>sem @ → domínio inteiro</b>
+                </div>
+              </form>
+            </div>
+
+            {wlMsg&&(
+              <div style={{padding:"9px 12px",borderRadius:8,fontSize:12,fontWeight:600,marginBottom:14,
+                background:wlMsg.startsWith("✓")?"var(--gbg)":"var(--rbg)",
+                border:`1px solid ${wlMsg.startsWith("✓")?"var(--gb)":"var(--rb)"}`,
+                color:wlMsg.startsWith("✓")?"var(--green)":"var(--red)"}}>{wlMsg}</div>
+            )}
+
+            {wlBusy&&!wl&&<div style={{padding:30,textAlign:"center",color:"var(--text3)",fontSize:11}}>Carregando whitelist...</div>}
+
+            {wl&&(
+              <>
+                {/* Dynamic (editáveis) */}
+                <div style={{marginBottom:18}}>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--text2)",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                    <span>Dinâmicos (editáveis)</span>
+                    <span style={{fontSize:9,color:"var(--text3)",fontWeight:500,textTransform:"none",letterSpacing:0}}>{wl.dynamic.emails.length+wl.dynamic.domains.length} itens</span>
+                  </div>
+                  {(wl.dynamic.domains.length===0&&wl.dynamic.emails.length===0)?(
+                    <div style={{padding:14,background:"var(--bg2)",border:"1px dashed var(--border)",borderRadius:10,fontSize:11,color:"var(--text3)",textAlign:"center"}}>
+                      Nenhum acesso dinâmico ainda. Use o formulário acima para adicionar.
+                    </div>
+                  ):(
+                    <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                      {wl.dynamic.domains.map(d=>(
+                        <div key={d} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontSize:9,padding:"2px 7px",background:"var(--bbg)",color:"var(--blue)",borderRadius:50,fontWeight:700,letterSpacing:.5}}>DOMÍNIO</span>
+                            <span style={{fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:600}}>@{d}</span>
+                          </div>
+                          <button onClick={()=>removeWhitelist(d,'domain')} disabled={wlBusy} style={{background:"transparent",border:"none",color:"var(--red)",cursor:"pointer",fontSize:14,padding:"2px 6px",opacity:.6}} title="Remover">×</button>
+                        </div>
+                      ))}
+                      {wl.dynamic.emails.map(e=>(
+                        <div key={e} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <span style={{fontSize:9,padding:"2px 7px",background:"var(--gbg)",color:"var(--green)",borderRadius:50,fontWeight:700,letterSpacing:.5}}>EMAIL</span>
+                            <span style={{fontFamily:"'Space Mono',monospace",fontSize:12,fontWeight:600}}>{e}</span>
+                          </div>
+                          <button onClick={()=>removeWhitelist(e,'email')} disabled={wlBusy} style={{background:"transparent",border:"none",color:"var(--red)",cursor:"pointer",fontSize:14,padding:"2px 6px",opacity:.6}} title="Remover">×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Static (read-only) */}
+                <div>
+                  <div style={{fontSize:9,fontWeight:700,letterSpacing:1.2,textTransform:"uppercase",color:"var(--text2)",marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                    <span>Estáticos (env vars Railway)</span>
+                    <span style={{fontSize:9,color:"var(--text3)",fontWeight:500,textTransform:"none",letterSpacing:0}}>{wl.static.emails.length+wl.static.domains.length} itens · não editáveis aqui</span>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,opacity:.65}}>
+                    {wl.static.domains.map(d=>(
+                      <div key={d} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",background:"var(--bg2)",borderRadius:8,fontSize:11}}>
+                        <span style={{fontSize:9,padding:"2px 7px",background:"var(--bbg)",color:"var(--blue)",borderRadius:50,fontWeight:700,letterSpacing:.5}}>DOMÍNIO</span>
+                        <span style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>@{d}</span>
+                      </div>
+                    ))}
+                    {wl.static.emails.map(e=>(
+                      <div key={e} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 12px",background:"var(--bg2)",borderRadius:8,fontSize:11}}>
+                        <span style={{fontSize:9,padding:"2px 7px",background:"var(--gbg)",color:"var(--green)",borderRadius:50,fontWeight:700,letterSpacing:.5}}>EMAIL</span>
+                        <span style={{fontFamily:"'Space Mono',monospace",fontWeight:600}}>{e}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{marginTop:18,paddingTop:14,borderTop:"1px solid var(--bg3)",fontSize:10,color:"var(--text3)",lineHeight:1.7}}>
+                  Admins atuais: <b>{wl.admins.length}</b> · {wl.admins.join(' · ')}<br/>
+                  Para mudar quem é admin, edite <code>ADMIN_EMAILS</code> no Railway dashboard ou em <code>server.js</code>.
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
 
