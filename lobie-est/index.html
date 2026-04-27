@@ -289,7 +289,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.0 · multi-tenant OAuth';
+const BUILD_VERSION='v5.1 · login universal';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -343,6 +343,19 @@ function emailMatchesIncorp(email,inc){
   if(inc.allowed_emails?.includes(e))return true;
   const dom=e.split('@')[1]||'';
   return inc.allowed_email_domains?.some(d=>dom===d.toLowerCase());
+}
+/* Role detection: dado email ou hash de passkey, retorna a primeira
+   entrada de incorporadores.json que matchear. Master é detectado
+   por is_master flag. Incorporadores com preset específico são locked. */
+function detectRole(incorporadores,email,passkeyHash){
+  if(!incorporadores)return null;
+  for(const[id,conf]of Object.entries(incorporadores)){
+    let match=false;
+    if(email&&emailMatchesIncorp(email,conf))match=true;
+    if(passkeyHash&&conf.passkey_hash===passkeyHash)match=true;
+    if(match)return{id,conf,isMaster:!!conf.is_master};
+  }
+  return null;
 }
 
 /* ═══ MONTE CARLO + HEATMAP ═══════════════════════════════════════
@@ -452,19 +465,23 @@ const U0=[
 
 function App(){
   const urlParams=new URLSearchParams(window.location.search);
-  const shareMode=urlParams.has('share')||urlParams.has('view')||urlParams.has('inc');
-  const shareName=urlParams.get('share')||urlParams.get('view')||'';
-  const incName=urlParams.get('inc')||(shareMode?'lobie':'');
-
-  const[incorp,setIncorp]=useState(null);
+  // Sessão restaurada do localStorage
+  const restoreSession=()=>{
+    try{
+      const s=JSON.parse(localStorage.getItem(AUTH_TOKEN_KEY)||'null');
+      if(s&&s.expires>Date.now())return s;
+    }catch{}return null;
+  };
+  const[allIncorp,setAllIncorp]=useState(null);  // incorporadores.json full
   const[incorpLoaded,setIncorpLoaded]=useState(false);
-  const[authed,setAuthed]=useState(()=>{
-    if(!shareMode)return true;
-    try{const s=JSON.parse(localStorage.getItem(AUTH_TOKEN_KEY)||'null');return !!(s&&s.expires>Date.now());}catch{return false;}
-  });
-  const[authUser,setAuthUser]=useState(()=>{
-    try{return JSON.parse(localStorage.getItem(AUTH_TOKEN_KEY)||'null')?.user||null;}catch{return null;}
-  });
+  const[session,setSession]=useState(restoreSession);
+  const authed=!!session;
+  const isMaster=!!session?.isMaster;
+  const userIncorp=session?.incorpId&&allIncorp?allIncorp[session.incorpId]:null;
+  // Para a tela de login, branding default = Lobie. Quando autenticado
+  // como incorporador, branding switcha para o incorporador.
+  const incorp=userIncorp||allIncorp?.['lobie-master']||null;
+  const incName=session?.incorpId||'lobie-master';
   const[authMode,setAuthMode]=useState('oauth');
   const[email,setEmail]=useState('');
   const[otpSent,setOtpSent]=useState(false);
@@ -473,22 +490,33 @@ function App(){
   const[authErr,setAuthErr]=useState('');
   const[authBusy,setAuthBusy]=useState(false);
 
-  // Load incorporador config
+  // Carregar registry de incorporadores
   useEffect(()=>{
-    if(!shareMode||incorpLoaded)return;
+    if(incorpLoaded)return;
     fetch('./incorporadores.json').then(r=>r.json()).then(d=>{
-      const i=d[incName]||d['lobie'];
-      if(i)setIncorp(i);
-      setIncorpLoaded(true);
+      setAllIncorp(d);setIncorpLoaded(true);
     }).catch(()=>setIncorpLoaded(true));
-  },[shareMode,incName,incorpLoaded]);
+  },[incorpLoaded]);
 
+  const finishAuth=(user,role,via)=>{
+    const s={
+      user,
+      incorpId:role.id,
+      isMaster:role.isMaster,
+      via,
+      expires:Date.now()+24*60*60*1000
+    };
+    localStorage.setItem(AUTH_TOKEN_KEY,JSON.stringify(s));
+    setSession(s);
+    setOtpCode('');setEmail('');setOtpSent(false);setPwdInput('');setAuthErr('');
+  };
   const sendOtp=async()=>{
     if(!email)return;
     setAuthBusy(true);setAuthErr('');
     try{
-      if(!emailMatchesIncorp(email,incorp)){
-        setAuthErr(`Email não autorizado para ${incorp?.name||'este estudo'}. Solicite acesso a contato@lobie.com.br.`);
+      const role=detectRole(allIncorp,email);
+      if(!role){
+        setAuthErr('Email não autorizado. Solicite acesso a contato@lobie.com.br.');
         setAuthBusy(false);return;
       }
       await lobieAuth.sendOTP(email);
@@ -500,29 +528,26 @@ function App(){
     if(!otpCode)return;
     setAuthBusy(true);setAuthErr('');
     try{
+      const role=detectRole(allIncorp,email);
+      if(!role){setAuthErr('Email não autorizado.');setAuthBusy(false);return;}
       const r=await lobieAuth.verifyOTP(email,otpCode);
-      const session={token:r.token,user:r.user||{email},expires:Date.now()+24*60*60*1000,via:'oauth',inc:incName};
-      localStorage.setItem(AUTH_TOKEN_KEY,JSON.stringify(session));
-      setAuthUser(session.user);setAuthed(true);
-      setOtpCode('');setEmail('');setOtpSent(false);
+      finishAuth(r.user||{email},role,'oauth');
     }catch(e){setAuthErr(e.message||'Código inválido.');}
     setAuthBusy(false);
   };
   const tryPasskey=async()=>{
-    if(!pwdInput||!incorp)return;
+    if(!pwdInput)return;
     setAuthBusy(true);setAuthErr('');
     const h=await sha256Hex(pwdInput);
-    if(h===incorp.passkey_hash){
-      const session={user:{email:`${incorp.id}@passkey`,name:incorp.name},expires:Date.now()+24*60*60*1000,via:'passkey',inc:incName};
-      localStorage.setItem(AUTH_TOKEN_KEY,JSON.stringify(session));
-      setAuthUser(session.user);setAuthed(true);
-      setPwdInput('');
+    const role=detectRole(allIncorp,null,h);
+    if(role){
+      finishAuth({email:`${role.id}@passkey`,name:role.conf.name},role,'passkey');
     }else setAuthErr('Passkey incorreto. Verifique o código enviado pela Lobie.');
     setAuthBusy(false);
   };
   const logout=()=>{
     localStorage.removeItem(AUTH_TOKEN_KEY);
-    setAuthed(false);setAuthUser(null);
+    setSession(null);
     setEmail('');setOtpSent(false);setOtpCode('');setPwdInput('');setAuthErr('');
   };
   const[step,setStep]=useState(shareMode?3:1);
@@ -533,12 +558,13 @@ function App(){
   const[sd,setSd]=useState(-1);
   const[showM,setShowM]=useState(false);
   const[shareLoaded,setShareLoaded]=useState(false);
+  // shareMode = read-only mode forçado p/ incorporadores (não master)
+  const shareMode=authed&&!isMaster;
 
-  // Auto-load preset when in share mode + authed
+  // Auto-load preset para incorporador (não master) quando autenticar
   useEffect(()=>{
-    if(shareMode&&authed&&!shareLoaded){
-      const presetName=incorp?.preset||shareName||'nilo-pecanha';
-      const presetUrl=presetName==='nilo'?'./nilo-pecanha.json':`./${presetName}.json`;
+    if(authed&&!isMaster&&userIncorp?.preset&&!shareLoaded){
+      const presetUrl=`./${userIncorp.preset}.json`;
       fetch(presetUrl).then(r=>r.json()).then(d=>{
         if(d.units&&d.units.length){
           setUnits(d.units);
@@ -548,7 +574,7 @@ function App(){
         }
       }).catch(()=>{}).finally(()=>setShareLoaded(true));
     }
-  },[shareMode,authed,shareName,shareLoaded,incorp]);
+  },[authed,isMaster,userIncorp,shareLoaded]);
 
   const bd=BAIRROS[proj.bairro]||BAIRROS["Ipanema"];
   const results=useMemo(()=>units.map(u=>calc(u,proj,bd)),[units,proj,bd]);
@@ -655,8 +681,8 @@ function App(){
   const upU=(id,f,v)=>setUnits(u=>u.map(x=>x.id===id?{...x,[f]:['nome','vista','tipo'].includes(f)?v:+v}:x));
   const ts=f=>{if(sb===f)setSd(d=>-d);else{setSb(f);setSd(-1);}};
 
-  // Auth gate for share mode
-  if(shareMode&&!authed){
+  // Auth gate UNIVERSAL: todos precisam logar
+  if(!authed){
     if(!incorpLoaded){
       return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
         <div style={{fontSize:11,color:"var(--text3)",fontFamily:"'Space Mono',monospace"}}>Carregando...</div>
@@ -669,25 +695,15 @@ function App(){
       <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,background:`linear-gradient(135deg, ${brandSoft} 0%, var(--bg) 70%)`}}>
         <div style={{maxWidth:460,width:"100%",background:"#fff",borderRadius:18,padding:34,boxShadow:"0 20px 60px rgba(0,0,0,.10)",border:"1px solid var(--border)",position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:0,left:0,right:0,height:4,background:brandColor}}/>
-          {/* Header: Lobie sempre dominante + incorporador secundário (se houver) */}
+          {/* Header sempre Lobie. Sistema detecta papel após login. */}
           <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:8}}>
             <img src="./logos/lobie.png" alt="Lobie" style={{height:36,maxWidth:140,objectFit:"contain"}}/>
-            {inc&&inc.id!=='lobie'&&(
-              <>
-                <div style={{width:1,height:32,background:"var(--bg3)"}}/>
-                {inc.logo_url?(
-                  <img src={inc.logo_url} alt={inc.name} style={{height:30,maxWidth:140,objectFit:"contain",opacity:.85}}
-                    onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex';}}/>
-                ):null}
-                <div style={{width:34,height:34,borderRadius:8,background:brandColor,display:inc.logo_url?"none":"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#fff",fontWeight:800,letterSpacing:1,flexShrink:0}}>{inc.name?.charAt(0).toUpperCase()}</div>
-              </>
-            )}
           </div>
           <div style={{fontSize:9,color:"var(--text3)",fontWeight:600,letterSpacing:.5,textTransform:"uppercase",marginTop:6,marginBottom:0}}>
-            {inc&&inc.id!=='lobie'?<>Estudo Lobie · <b style={{color:"var(--text2)"}}>{inc.name}</b></>:inc?.tagline||"Estudo de Rentabilidade"}
+            Plataforma de Estudos de Rentabilidade STR
           </div>
-          <h1 style={{fontSize:22,fontWeight:700,letterSpacing:-.3,marginTop:20,marginBottom:6}}>Acesso restrito</h1>
-          <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:20}}>{inc?.subtitle||"Este estudo é confidencial."} Acesse via OAuth Lobie ou passkey personalizado.</p>
+          <h1 style={{fontSize:22,fontWeight:700,letterSpacing:-.3,marginTop:20,marginBottom:6}}>Acesse seu estudo</h1>
+          <p style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:20}}>Login universal Lobie. Após autenticar, o sistema identifica automaticamente seu papel — incorporadores acessam apenas seus estudos, equipe Lobie tem acesso master a todos.</p>
 
           {/* Tabs */}
           <div style={{display:"flex",gap:3,padding:3,background:"var(--bg2)",borderRadius:10,marginBottom:16}}>
@@ -755,26 +771,51 @@ function App(){
         <div className="logo" style={{display:"flex",alignItems:"center",gap:10}}>
           <img src="./logos/lobie.png" alt="Lobie" style={{height:24,objectFit:"contain"}}/>
           <span style={{borderLeft:"1px solid var(--border)",paddingLeft:10}}>Estudo de Rentabilidade</span>
-          {shareMode&&incorp&&incorp.id!=='lobie'&&(
+          {!isMaster&&userIncorp&&(
             <>
               <span style={{color:"var(--text3)",fontWeight:300,fontSize:14}}>·</span>
-              {incorp.logo_url?<img src={incorp.logo_url} alt={incorp.name} style={{height:22,maxWidth:100,objectFit:"contain",opacity:.85}}/>:<span style={{fontSize:12,fontWeight:700,color:incorp.primary_color||"var(--text)"}}>{incorp.name}</span>}
+              {userIncorp.logo_url?<img src={userIncorp.logo_url} alt={userIncorp.name} style={{height:22,maxWidth:100,objectFit:"contain",opacity:.85}}/>:<span style={{fontSize:12,fontWeight:700,color:userIncorp.primary_color||"var(--text)"}}>{userIncorp.name}</span>}
             </>
           )}
           <span style={{fontSize:9,color:"var(--text3)",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:0,fontWeight:400}}>· {BUILD_VERSION}</span>
-          {shareMode&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--acc)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Somente leitura</span>}
+          {isMaster&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--green)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Master</span>}
+          {!isMaster&&<span style={{fontSize:9,color:"#fff",marginLeft:4,fontFamily:"'Space Mono',monospace",letterSpacing:.5,background:"var(--acc)",padding:"3px 8px",borderRadius:5,textTransform:"uppercase",fontWeight:700}}>Somente leitura</span>}
         </div>
-        <div style={{display:"flex",gap:6}} className="no-print">
-          {step===3&&!shareMode&&(
+        <div style={{display:"flex",gap:6,alignItems:"center"}} className="no-print">
+          {isMaster&&allIncorp&&(
+            <select onChange={async e=>{
+              const id=e.target.value;if(!id)return;
+              const inc=allIncorp[id];
+              if(inc?.preset){
+                try{
+                  const r=await fetch(`./${inc.preset}.json`);const d=await r.json();
+                  if(d.units?.length){
+                    setUnits(d.units);setNid(Math.max(...d.units.map(u=>u.id))+1);
+                    if(d.projeto)setProj(p=>({...p,...d.projeto}));
+                    setStep(3);setShareLoaded(true);
+                  }
+                }catch{}
+              }
+              e.target.value='';
+            }} value="" style={{fontSize:11,padding:"6px 10px",borderRadius:50,border:"1px solid var(--border)",background:"var(--bg)",cursor:"pointer",fontWeight:600}}>
+              <option value="">↓ Carregar estudo</option>
+              {Object.entries(allIncorp).filter(([id,c])=>c.preset).map(([id,c])=>(
+                <option key={id} value={id}>{c.name} · {c.preset}</option>
+              ))}
+            </select>
+          )}
+          {step===3&&isMaster&&(
             <button className="btn" onClick={()=>{
-              const preset=shareName||'nilo';
-              const url=`${window.location.origin}${window.location.pathname}?share=nilo`;
+              const url=`${window.location.origin}${window.location.pathname}`;
               navigator.clipboard?.writeText(url);
-              alert(`Link de visualização copiado:\n\n${url}\n\nEnvie para o cliente — ele verá apenas os resultados (sem poder editar).`);
-            }}>🔗 Compartilhar</button>
+              alert(`Link universal copiado:\n\n${url}\n\nQualquer pessoa pode acessar — login determina o que cada um vê (incorporadores vão direto ao seu estudo, master vê todos).`);
+            }}>🔗 Copiar link</button>
           )}
           {step===3&&<><button className="btn" onClick={()=>setShowM(m=>!m)}>{showM?"Ocultar":"Ver"} metodologia</button><button className="btn btn-p" onClick={()=>{setShowM(true);setTimeout(()=>window.print(),250);}}>Exportar PDF</button></>}
-          {shareMode&&authed&&<button className="btn" onClick={logout} title="Encerrar sessão">⎋ Sair</button>}
+          <div style={{display:"flex",alignItems:"center",gap:7,marginLeft:6,paddingLeft:10,borderLeft:"1px solid var(--border)"}}>
+            <span style={{fontSize:10,color:"var(--text2)",fontFamily:"'Space Mono',monospace",fontWeight:600,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={session?.user?.email}>{session?.user?.email||session?.user?.name}</span>
+            <button onClick={logout} style={{fontSize:10,padding:"4px 10px",borderRadius:50,border:"1px solid var(--border)",background:"transparent",color:"var(--text2)",cursor:"pointer",fontWeight:600}}>Sair</button>
+          </div>
         </div>
       </div>
 
