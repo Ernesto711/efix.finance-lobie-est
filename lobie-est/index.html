@@ -129,19 +129,20 @@ const {useState,useMemo,useEffect}=React;
 const A=0.60,B=0.40,ADRREF=795,DIAS=30.42,OTA=0.165,TXL=0.12;
 
 const BAIRROS={
-  "Ipanema":      {di:1.000,occ:0.651},
-  "Leblon":       {di:0.994,occ:0.641},
-  "Leme":         {di:0.870,occ:0.635},
-  "Copacabana":   {di:0.863,occ:0.640},
-  "Flamengo":     {di:0.812,occ:0.552},
-  "Urca":         {di:0.800,occ:0.540},
-  "Botafogo":     {di:0.793,occ:0.625},
-  "Humaitá":      {di:0.793,occ:0.625},
-  "Catete":       {di:0.750,occ:0.600},
-  "Glória":       {di:0.740,occ:0.590},
-  "Centro":       {di:0.226,occ:0.580},
-  "Santa Teresa": {di:0.644,occ:0.542},
-  "Cosme Velho":  {di:0.610,occ:0.494},
+  "Ipanema":         {di:1.000,occ:0.651},
+  "Leblon":          {di:0.994,occ:0.641},
+  "Leme":            {di:0.870,occ:0.635},
+  "Copacabana":      {di:0.863,occ:0.640},
+  "Flamengo":        {di:0.812,occ:0.552},
+  "Urca":            {di:0.800,occ:0.540},
+  "Botafogo":        {di:0.793,occ:0.625},
+  "Humaitá":         {di:0.793,occ:0.625},
+  "Catete":          {di:0.750,occ:0.600},
+  "Glória":          {di:0.740,occ:0.590},
+  "Santa Teresa":    {di:0.644,occ:0.542},
+  "Cosme Velho":     {di:0.610,occ:0.494},
+  "Barra da Tijuca": {di:0.550,occ:0.600},
+  "Centro":          {di:0.226,occ:0.580},
 };
 const VISTAS=[
   {key:"sem_vista",      label:"Sem vista",   short:"—",     m:1.00,desc:"base"},
@@ -291,7 +292,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.8 · master auto-load';
+const BUILD_VERSION='v5.9 · vogue+patrimar dropdown';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -850,8 +851,12 @@ function App(){
         <div style={{display:"flex",gap:6,alignItems:"center"}} className="no-print">
           {isMaster&&allIncorp&&(
             <select onChange={async e=>{
-              const id=e.target.value;if(!id)return;
-              const inc=allIncorp[id];
+              const v=e.target.value;if(!v){return;}
+              if(v==='__new__'){
+                setUnits(U0);setNid(12);setProj(P0);setSelId(null);setStep(1);setShareLoaded(true);
+                e.target.value='';return;
+              }
+              const inc=allIncorp[v];
               if(inc?.preset){
                 try{
                   const r=await fetch(`./${inc.preset}.json?v=${Date.now()}`,{cache:'no-store'});const d=await r.json();
@@ -865,9 +870,14 @@ function App(){
               e.target.value='';
             }} value="" style={{fontSize:11,padding:"6px 10px",borderRadius:50,border:"1px solid var(--border)",background:"var(--bg)",cursor:"pointer",fontWeight:600}}>
               <option value="">↓ Carregar estudo</option>
-              {Object.entries(allIncorp).filter(([id,c])=>c.preset).map(([id,c])=>(
-                <option key={id} value={id}>{c.name} · {c.preset}</option>
-              ))}
+              <optgroup label="Estudos configurados">
+                {Object.entries(allIncorp).filter(([id,c])=>c.preset).map(([id,c])=>(
+                  <option key={id} value={id}>{c.display_name||`${c.name} · ${c.preset}`}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Estudos de incorporadores">
+                <option value="__new__">+ Novo estudo (incorporador)</option>
+              </optgroup>
             </select>
           )}
           {step===3&&isMaster&&(

@@ -33,6 +33,20 @@
       "gabriel.fidalgo@patrimar.com.br"
     ]
   },
+  "vogue-square": {
+    "id": "vogue-square",
+    "name": "Vogue Square",
+    "display_name": "Vogue Square · Barra da Tijuca",
+    "is_master": false,
+    "preset": "vogue-square",
+    "primary_color": "#8B6F47",
+    "primary_color_soft": "rgba(139, 111, 71, 0.10)",
+    "logo_url": null,
+    "tagline": "Conversão STR · ex-XR Hotéis",
+    "subtitle": "222 studios · Av. das Américas, Barra da Tijuca",
+    "allowed_email_domains": [],
+    "allowed_emails": []
+  },
   "tobe": {
     "id": "tobe",
     "name": "Tobe",
