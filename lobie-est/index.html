@@ -292,7 +292,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v6.0 · bueno + benchmark Lobie real';
+const BUILD_VERSION='v6.1 · P80 filter (top 20% performers)';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -1327,10 +1327,10 @@ function App(){
               <div style={{background:"linear-gradient(135deg, rgba(11,192,237,0.05) 0%, rgba(124,58,237,0.05) 100%)",border:"1px solid #c7d2fe",borderRadius:14,padding:"14px 16px",marginBottom:11}}>
                 <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:11,flexWrap:"wrap",gap:6}}>
                   <div>
-                    <div style={{fontSize:9,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"#4338ca"}}>Benchmark Lobie real · {proj.bairro}</div>
-                    <div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>{b.uhs_ativas}/{b.uhs_contratadas} UHs ativas · {b.unit_months} unit-months · {lobieBench.periodo_referencia}</div>
+                    <div style={{fontSize:9,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"#4338ca"}}>Benchmark Lobie real · {proj.bairro} · top 20% performers</div>
+                    <div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>{b.uhs_ativas_p80||b.uhs_ativas||0}/{b.uhs_contratadas} UHs no top 20% · {b.unit_months} unit-months · {lobieBench.periodo_referencia}</div>
                   </div>
-                  <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Space Mono',monospace"}}>Fonte: {lobieBench.fonte}</div>
+                  <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Space Mono',monospace",textAlign:"right"}}>Fonte: {lobieBench.fonte}{lobieBench.p80_threshold?<><br/>P80 ≥ R$ {Math.round(lobieBench.p80_threshold).toLocaleString('pt-BR')}/UH/mês</>:""}</div>
                 </div>
 
                 {/* KPIs Lobie portfolio bairro */}
@@ -1366,7 +1366,7 @@ function App(){
                 {peers.length>0&&(
                   <div>
                     <div style={{fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:7}}>
-                      Peer set Lobie em {proj.bairro} ({peers.length} empreendimento{peers.length>1?"s":""})
+                      Peer set Lobie em {proj.bairro} ({peers.length} empreendimento{peers.length>1?"s":""}) · métricas dos top 20% performers
                     </div>
                     <div style={{background:"#fff",borderRadius:9,border:"1px solid #c7d2fe",overflow:"hidden"}}>
                       <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
@@ -1384,6 +1384,8 @@ function App(){
                           {peers.map(([id,e],i)=>{
                             const isProj=tokenMatch(e.nome);
                             const gapPct=peerMaxRep>0?((e.repasse_uh_mes-peerMaxRep)/peerMaxRep*100):0;
+                            const p80Count=e.uhs_p80!=null?e.uhs_p80:e.uhs_ativas;
+                            const total=e.uhs_contratadas_total||e.uhs_contratadas;
                             return (
                               <tr key={id} style={{background:isProj?"rgba(124,58,237,0.06)":(i%2===1?"var(--bg2)":"#fff"),borderTop:"1px solid var(--bg3)"}}>
                                 <td style={{padding:"8px 10px",fontWeight:isProj?700:500}}>
@@ -1391,7 +1393,7 @@ function App(){
                                   {e.nome}
                                   {i===0&&<span className="badge bg" style={{fontSize:8,marginLeft:6,padding:"1px 7px"}}>TOP</span>}
                                 </td>
-                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",fontSize:10}}>{e.uhs_ativas}/{e.uhs_contratadas}</td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",fontSize:10}} title="UHs ≥ P80 / contratadas">{p80Count}/{total}</td>
                                 <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace"}}>{brl(e.adr_real)}</td>
                                 <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace"}}>{e.occ_real.toFixed(1)}%</td>
                                 <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace"}}>{brl(e.bruto_uh_mes)}</td>
@@ -1406,37 +1408,46 @@ function App(){
                         </tbody>
                       </table>
                     </div>
-                    {/* Insights: ranking, gap to top, oportunidade ativando UHs zeradas */}
+                    {/* Insights: ranking, gap to top, oportunidade escalando P80 */}
                     {(()=>{
                       const projMatch=peers.find(([id,e])=>tokenMatch(e.nome));
                       if(!projMatch) return null;
                       const me=projMatch[1];
                       const rank=peers.findIndex(([id,e])=>e.nome===me.nome)+1;
                       const gapToTop=peerMaxRep-me.repasse_uh_mes;
-                      const inativas=me.uhs_contratadas-me.uhs_ativas;
-                      const oportAtivacao=inativas*me.repasse_uh_mes*12;
+                      const totalContrat=me.uhs_contratadas_total||me.uhs_contratadas;
+                      const p80Count=me.uhs_p80!=null?me.uhs_p80:me.uhs_ativas;
+                      const naoP80=totalContrat-p80Count;
+                      const oportEscala=naoP80*me.repasse_uh_mes*12;
                       const aboveMedian=rank<=Math.ceil(peers.length/2);
+                      const pctP80=totalContrat>0?(p80Count/totalContrat*100):0;
                       return (
                         <div style={{marginTop:11,padding:"11px 13px",background:"#fff",border:"1px solid #c7d2fe",borderRadius:9}}>
-                          <div style={{fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"#4338ca",marginBottom:8}}>📊 Análise do seu estudo no peer set · {me.nome}</div>
+                          <div style={{fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"#4338ca",marginBottom:8}}>📊 Análise · {me.nome} no peer set (top 20% performers)</div>
                           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,fontSize:11}}>
                             <div style={{padding:"8px 10px",background:"var(--bg2)",borderRadius:7}}>
                               <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Posição no peer set</div>
                               <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:aboveMedian?"var(--green)":"var(--red)"}}>#{rank} <span style={{fontSize:11,color:"var(--text3)"}}>de {peers.length}</span></div>
-                              <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{aboveMedian?"Acima da mediana":"Abaixo da mediana"}</div>
+                              <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{aboveMedian?"Acima da mediana":"Abaixo da mediana"} · UHs no top 20%: {p80Count}/{totalContrat} ({pctP80.toFixed(0)}%)</div>
                             </div>
-                            {gapToTop>0&&(
+                            {gapToTop>0?(
                               <div style={{padding:"8px 10px",background:"var(--abg)",borderRadius:7,border:"1px solid var(--ab)"}}>
                                 <div style={{fontSize:9,color:"var(--amber)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Gap to top performer</div>
                                 <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:"var(--amber)"}}>{brl(gapToTop)}<span style={{fontSize:10,color:"var(--text3)"}}>/UH/mês</span></div>
-                                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{brl(gapToTop*12*me.uhs_ativas)} potencial anual (UHs ativas)</div>
+                                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{brl(gapToTop*12*p80Count)} potencial anual sobre as {p80Count} UH{p80Count>1?"s":""} top do prédio</div>
+                              </div>
+                            ):(
+                              <div style={{padding:"8px 10px",background:"var(--gbg)",borderRadius:7,border:"1px solid var(--gb)"}}>
+                                <div style={{fontSize:9,color:"var(--green)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Top performer</div>
+                                <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:"var(--green)"}}>R$ {brl(me.repasse_uh_mes).replace('R$ ','')}</div>
+                                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>Referência do peer set para os demais</div>
                               </div>
                             )}
-                            {inativas>0&&(
+                            {naoP80>0&&(
                               <div style={{padding:"8px 10px",background:"var(--gbg)",borderRadius:7,border:"1px solid var(--gb)"}}>
-                                <div style={{fontSize:9,color:"var(--green)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Oportunidade · ativação</div>
-                                <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:"var(--green)"}}>{brl(oportAtivacao)}</div>
-                                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{inativas} UH{inativas>1?"s":""} contratada{inativas>1?"s":""} sem operação · ganho potencial 12m se ativada{inativas>1?"s":""}</div>
+                                <div style={{fontSize:9,color:"var(--green)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Oportunidade · escalar P80</div>
+                                <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:"var(--green)"}}>{brl(oportEscala)}</div>
+                                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{naoP80} UH{naoP80>1?"s":""} fora do top 20% · upside 12m se atingirem o ceiling do prédio</div>
                               </div>
                             )}
                           </div>
