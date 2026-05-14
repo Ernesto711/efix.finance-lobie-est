@@ -142,7 +142,7 @@ const BAIRROS={
   "Santa Teresa":    {di:0.644,occ:0.542},
   "Cosme Velho":     {di:0.610,occ:0.494},
   "Barra da Tijuca": {di:0.550,occ:0.600},
-  "Centro":          {di:0.226,occ:0.580},
+  "Centro":          {di:0.250,occ:0.580},
 };
 const VISTAS=[
   {key:"sem_vista",      label:"Sem vista",   short:"—",     m:1.00,desc:"base"},
@@ -292,7 +292,7 @@ function yc(y){
 const brl=n=>n.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
 const pct=n=>n.toFixed(1)+'%';
 const today=new Date().toLocaleDateString('pt-BR');
-const BUILD_VERSION='v5.9 · vogue+patrimar dropdown';
+const BUILD_VERSION='v6.0 · bueno + benchmark Lobie real';
 
 /* ═══ AUTH MULTITENANT ══════════════════════════════════════════════
    Login per incorporador, com 2 caminhos:
@@ -507,6 +507,15 @@ function App(){
       setAllIncorp(d);setIncorpLoaded(true);
     }).catch(()=>setIncorpLoaded(true));
   },[incorpLoaded]);
+
+  // Carregar benchmarks reais do BD Repasse Lobie (operação real, 4 meses LTM)
+  const[lobieBench,setLobieBench]=useState(null);
+  useEffect(()=>{
+    fetch('./lobie_benchmarks.json?v='+Date.now(),{cache:'no-store'})
+      .then(r=>r.json())
+      .then(d=>setLobieBench(d))
+      .catch(()=>{});
+  },[]);
 
   const finishAuth=(user,role,via,token)=>{
     const s={
@@ -1294,6 +1303,151 @@ function App(){
               </div>
             </div>
           )}
+
+          {/* ── BENCHMARK LOBIE REAL ── BD Repasse 4 meses, peer set bairro ── */}
+          {lobieBench&&lobieBench.por_bairro&&lobieBench.por_bairro[proj.bairro]&&(()=>{
+            const b=lobieBench.por_bairro[proj.bairro];
+            const peers=Object.entries(lobieBench.por_empreendimento||{}).filter(([id,e])=>e.bairro===proj.bairro).sort((a,b)=>b[1].repasse_uh_mes-a[1].repasse_uh_mes);
+            // Token-match: ignora palavras genéricas e procura termo distintivo (ex: "Bueno" em "Lobie Bueno")
+            const STOPWORDS=new Set(["lobie","square","tower","engenharia","flat","residencial","studio","studios","de","da","do"]);
+            const projTokens=(proj.nome||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").split(/[\s\-_(]+/).filter(t=>t.length>=4&&!STOPWORDS.has(t));
+            const tokenMatch=(name)=>{
+              if(!projTokens.length) return false;
+              const n=(name||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+              return projTokens.some(tok=>n.includes(tok));
+            };
+            // Comparar avgYL (Lobie scenario) vs peer real
+            const peerMaxRep=Math.max(...peers.map(([_,e])=>e.repasse_uh_mes),0);
+            const peerMinRep=Math.min(...peers.map(([_,e])=>e.repasse_uh_mes),Infinity);
+            const peerAdrAvg=peers.length?peers.reduce((s,[_,e])=>s+e.adr_real,0)/peers.length:0;
+            const peerOccAvg=peers.length?peers.reduce((s,[_,e])=>s+e.occ_real,0)/peers.length:0;
+            const myAdrLobie=+proj.adrLobie||0;
+            const myOccLobie=+proj.occLobie||0;
+            return (
+              <div style={{background:"linear-gradient(135deg, rgba(11,192,237,0.05) 0%, rgba(124,58,237,0.05) 100%)",border:"1px solid #c7d2fe",borderRadius:14,padding:"14px 16px",marginBottom:11}}>
+                <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",marginBottom:11,flexWrap:"wrap",gap:6}}>
+                  <div>
+                    <div style={{fontSize:9,fontWeight:800,letterSpacing:1.5,textTransform:"uppercase",color:"#4338ca"}}>Benchmark Lobie real · {proj.bairro}</div>
+                    <div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>{b.uhs_ativas}/{b.uhs_contratadas} UHs ativas · {b.unit_months} unit-months · {lobieBench.periodo_referencia}</div>
+                  </div>
+                  <div style={{fontSize:9,color:"var(--text3)",fontFamily:"'Space Mono',monospace"}}>Fonte: {lobieBench.fonte}</div>
+                </div>
+
+                {/* KPIs Lobie portfolio bairro */}
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8,marginBottom:11}}>
+                  <div style={{background:"#fff",borderRadius:9,padding:"9px 11px",border:"1px solid #c7d2fe"}}>
+                    <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>ADR real Lobie</div>
+                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:15,fontWeight:700,color:"#4338ca"}}>{brl(b.adr_real)}</div>
+                    {myAdrLobie>0&&<div style={{fontSize:9,marginTop:2,color:myAdrLobie>=b.adr_real?"var(--green)":"var(--red)"}}>{myAdrLobie>=b.adr_real?"+":""}{((myAdrLobie/b.adr_real-1)*100).toFixed(0)}% vs estudo</div>}
+                  </div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"9px 11px",border:"1px solid #c7d2fe"}}>
+                    <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Occ real Lobie</div>
+                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:15,fontWeight:700,color:"#4338ca"}}>{b.occ_real.toFixed(1)}%</div>
+                    {myOccLobie>0&&<div style={{fontSize:9,marginTop:2,color:myOccLobie>=b.occ_real?"var(--green)":"var(--red)"}}>{myOccLobie>=b.occ_real?"+":""}{(myOccLobie-b.occ_real).toFixed(1)}pp vs estudo</div>}
+                  </div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"9px 11px",border:"1px solid #c7d2fe"}}>
+                    <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Bruto/UH/mês</div>
+                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:15,fontWeight:700}}>{brl(b.bruto_uh_mes)}</div>
+                    <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>após OTA: {brl(b.liq_uh_mes)}</div>
+                  </div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"9px 11px",border:"1px solid #c7d2fe"}}>
+                    <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Repasse/UH/mês</div>
+                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:15,fontWeight:700,color:"var(--green)"}}>{brl(b.repasse_uh_mes)}</div>
+                    <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>despesas {brl(b.desp_uh_mes)}</div>
+                  </div>
+                  <div style={{background:"#fff",borderRadius:9,padding:"9px 11px",border:"1px solid #c7d2fe"}}>
+                    <div style={{fontSize:8,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700}}>Anualizado</div>
+                    <div style={{fontFamily:"'Space Mono',monospace",fontSize:15,fontWeight:700,color:"var(--green)"}}>{brl(b.repasse_anual_estim)}</div>
+                    <div style={{fontSize:9,color:"var(--text3)",marginTop:2}}>·12 do real LTM4</div>
+                  </div>
+                </div>
+
+                {/* Peer comparison: lista de empreendimentos do mesmo bairro */}
+                {peers.length>0&&(
+                  <div>
+                    <div style={{fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"var(--text2)",marginBottom:7}}>
+                      Peer set Lobie em {proj.bairro} ({peers.length} empreendimento{peers.length>1?"s":""})
+                    </div>
+                    <div style={{background:"#fff",borderRadius:9,border:"1px solid #c7d2fe",overflow:"hidden"}}>
+                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+                        <thead style={{background:"#eef2ff"}}><tr>
+                          <th style={{padding:"7px 10px",textAlign:"left",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>Empreendimento</th>
+                          <th style={{padding:"7px 10px",textAlign:"right",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>UHs ativas</th>
+                          <th style={{padding:"7px 10px",textAlign:"right",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>ADR</th>
+                          <th style={{padding:"7px 10px",textAlign:"right",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>Occ</th>
+                          <th style={{padding:"7px 10px",textAlign:"right",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>Bruto/UH/m</th>
+                          <th style={{padding:"7px 10px",textAlign:"right",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>Repasse/UH/m</th>
+                          <th style={{padding:"7px 10px",textAlign:"right",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>Anual</th>
+                          <th style={{padding:"7px 10px",textAlign:"right",fontSize:9,textTransform:"uppercase",letterSpacing:.5,fontWeight:700,color:"var(--text2)"}}>vs Top</th>
+                        </tr></thead>
+                        <tbody>
+                          {peers.map(([id,e],i)=>{
+                            const isProj=tokenMatch(e.nome);
+                            const gapPct=peerMaxRep>0?((e.repasse_uh_mes-peerMaxRep)/peerMaxRep*100):0;
+                            return (
+                              <tr key={id} style={{background:isProj?"rgba(124,58,237,0.06)":(i%2===1?"var(--bg2)":"#fff"),borderTop:"1px solid var(--bg3)"}}>
+                                <td style={{padding:"8px 10px",fontWeight:isProj?700:500}}>
+                                  {isProj&&<span style={{display:"inline-block",width:6,height:6,borderRadius:"50%",background:"#7c3aed",marginRight:7}}/>}
+                                  {e.nome}
+                                  {i===0&&<span className="badge bg" style={{fontSize:8,marginLeft:6,padding:"1px 7px"}}>TOP</span>}
+                                </td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",fontSize:10}}>{e.uhs_ativas}/{e.uhs_contratadas}</td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace"}}>{brl(e.adr_real)}</td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace"}}>{e.occ_real.toFixed(1)}%</td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace"}}>{brl(e.bruto_uh_mes)}</td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:"var(--green)"}}>{brl(e.repasse_uh_mes)}</td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700}}>{brl(e.repasse_anual_estim)}</td>
+                                <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'Space Mono',monospace",fontWeight:700,color:gapPct===0?"var(--green)":gapPct>=-15?"var(--amber)":"var(--red)"}}>
+                                  {gapPct===0?"=":gapPct.toFixed(0)+"%"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Insights: ranking, gap to top, oportunidade ativando UHs zeradas */}
+                    {(()=>{
+                      const projMatch=peers.find(([id,e])=>tokenMatch(e.nome));
+                      if(!projMatch) return null;
+                      const me=projMatch[1];
+                      const rank=peers.findIndex(([id,e])=>e.nome===me.nome)+1;
+                      const gapToTop=peerMaxRep-me.repasse_uh_mes;
+                      const inativas=me.uhs_contratadas-me.uhs_ativas;
+                      const oportAtivacao=inativas*me.repasse_uh_mes*12;
+                      const aboveMedian=rank<=Math.ceil(peers.length/2);
+                      return (
+                        <div style={{marginTop:11,padding:"11px 13px",background:"#fff",border:"1px solid #c7d2fe",borderRadius:9}}>
+                          <div style={{fontSize:9,fontWeight:700,letterSpacing:.8,textTransform:"uppercase",color:"#4338ca",marginBottom:8}}>📊 Análise do seu estudo no peer set · {me.nome}</div>
+                          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,fontSize:11}}>
+                            <div style={{padding:"8px 10px",background:"var(--bg2)",borderRadius:7}}>
+                              <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Posição no peer set</div>
+                              <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:aboveMedian?"var(--green)":"var(--red)"}}>#{rank} <span style={{fontSize:11,color:"var(--text3)"}}>de {peers.length}</span></div>
+                              <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{aboveMedian?"Acima da mediana":"Abaixo da mediana"}</div>
+                            </div>
+                            {gapToTop>0&&(
+                              <div style={{padding:"8px 10px",background:"var(--abg)",borderRadius:7,border:"1px solid var(--ab)"}}>
+                                <div style={{fontSize:9,color:"var(--amber)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Gap to top performer</div>
+                                <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:"var(--amber)"}}>{brl(gapToTop)}<span style={{fontSize:10,color:"var(--text3)"}}>/UH/mês</span></div>
+                                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{brl(gapToTop*12*me.uhs_ativas)} potencial anual (UHs ativas)</div>
+                              </div>
+                            )}
+                            {inativas>0&&(
+                              <div style={{padding:"8px 10px",background:"var(--gbg)",borderRadius:7,border:"1px solid var(--gb)"}}>
+                                <div style={{fontSize:9,color:"var(--green)",textTransform:"uppercase",letterSpacing:.5,fontWeight:700,marginBottom:3}}>Oportunidade · ativação</div>
+                                <div style={{fontFamily:"'Space Mono',monospace",fontSize:16,fontWeight:700,color:"var(--green)"}}>{brl(oportAtivacao)}</div>
+                                <div style={{fontSize:9,color:"var(--text2)",marginTop:3}}>{inativas} UH{inativas>1?"s":""} contratada{inativas>1?"s":""} sem operação · ganho potencial 12m se ativada{inativas>1?"s":""}</div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Legenda */}
           <div style={{display:"flex",gap:5,marginBottom:11,flexWrap:"wrap",alignItems:"center"}}>

@@ -47,6 +47,20 @@
     "allowed_email_domains": [],
     "allowed_emails": []
   },
+  "bueno": {
+    "id": "bueno",
+    "name": "Lobie Bueno",
+    "display_name": "Bueno · Centro (operação Lobie real)",
+    "is_master": false,
+    "preset": "bueno",
+    "primary_color": "#7c3aed",
+    "primary_color_soft": "rgba(124, 58, 237, 0.10)",
+    "logo_url": null,
+    "tagline": "BD Repasse Lobie · Jan-Abr 2026",
+    "subtitle": "29 UHs · 19 ativas · benchmark Centro peer set",
+    "allowed_email_domains": [],
+    "allowed_emails": []
+  },
   "tobe": {
     "id": "tobe",
     "name": "Tobe",
